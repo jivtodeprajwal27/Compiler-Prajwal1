@@ -29,12 +29,12 @@ class NumLiteral:
 class BoolLiteral:
     value: bool
     type: SimType =BoolType
+
 @dataclass
 class StringLiteral:
     value: str
     type: SimType=StringType
     
-
 
 @dataclass
 class BinOp:
@@ -122,8 +122,6 @@ class InvalidProgram(Exception):
     pass
 
 
-    
-
 def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
     if environment is None:
         environment = {}
@@ -146,8 +144,32 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
         case BinOp("*", left, right):
             return eval(left, environment) * eval(right, environment)
         case BinOp("/", left, right):
+            if(right==0):
+                raise InvalidProgram()
             return eval(left, environment) / eval(right, environment)
-
+        case BinOp("//", left, right):
+            if(right==0):
+                raise InvalidProgram()
+            return eval(left, environment) // eval(right, environment)
+        case BinOp("%", left, right):
+            if(right==0):
+                raise InvalidProgram()
+            return eval(left, environment) % eval(right, environment)
+        case BinOp("**", left, right):
+            return eval(left, environment) ** eval(right, environment)
+        case BinOp("=",left,right):
+            return eval(left, environment) == eval(right, environment)
+        case BinOp("<",left,right):
+            return eval(left, environment) < eval(right, environment)
+        case BinOp(">",left,right):
+            return eval(left, environment) > eval(right, environment)
+        case BinOp(">=",left,right):
+            return eval(left, environment) >= eval(right, environment)
+        case BinOp("<=",left,right):
+            return eval(left, environment) <= eval(right, environment)
+        case BinOp("!=",left,right):
+            return eval(left, environment) != eval(right, environment)
+    
         # Bitwise Operators With type checking
         case BinOp("&",left,right):
             left_type=typecheck(left).type
@@ -194,8 +216,7 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
                 print(right_type)
                 raise InvalidProgram()
             return int(eval(left,environment)) << int(eval(right,environment))
-
-        
+  
         # String Operations
         # implement string typecheck for this
         case StringOp('add',left,right):
