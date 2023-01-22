@@ -29,6 +29,7 @@ class NumLiteral:
 class BoolLiteral:
     value: bool
     type: SimType =BoolType
+
 @dataclass
 class StringLiteral:
     value: str
@@ -48,11 +49,17 @@ class Variable:
     name: str
 
 @dataclass
+class UnOp:
+    operator: str
+    vari : int
+
+
+@dataclass
 class StringOp:
     operator:str
     left:'AST'
     right:Optional['AST']=None
-    # type:StringLiteral
+    #type:StringLiteral
     
 
 @dataclass
@@ -202,8 +209,22 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
             return eval(left)+eval(right)
         case StringOp('length',left):
             return len(eval(left))
-       
         
+        #unary Operations
+        case UnOp('-',vari):
+            un=eval(vari)
+            un=-un
+            return eval(NumLiteral(un))
+        case UnOp('++',vari):
+            un=eval(vari)
+            un=un+1
+            return eval(NumLiteral(un))
+        case UnOp('--',vari):
+            un=eval(vari)
+            un=un-1
+            return eval(NumLiteral(un))
+       
+        #if-else operations
     raise InvalidProgram()
 
 
@@ -222,6 +243,14 @@ def test_string():
     c=StringOp("add",a,b)
     print(eval(c))
     print(eval(StringOp('length',c)))
-    # print(eval(StringOp('slice',)))
+    #print(eval(StringOp('slice',)))
 
-test_string()
+def test_unop():
+    a=Variable("a")
+    e1=NumLiteral(1)
+    e2=UnOp("++",e1)
+    e3=UnOp("-",e1)
+    e4=UnOp("--",e1)
+    assert eval(e3)== -1
+    assert eval(e2)==2
+    assert eval(e4)== 0
