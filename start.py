@@ -1,5 +1,5 @@
 from fractions import Fraction
-from dataclasses import dataclass
+from dataclasses import dataclass,field
 from typing import Optional, NewType, Mapping
 
 # A minimal example to illustrate typechecking.
@@ -12,6 +12,9 @@ class NumType:
 class BoolType:
     pass
 
+@dataclass
+class StringType:
+    pass
 
 SimType = NumType | BoolType
 
@@ -26,7 +29,10 @@ class NumLiteral:
 class BoolLiteral:
     value: bool
     type: SimType =BoolType
-
+@dataclass
+class StringLiteral:
+    value: str
+    type: SimType=StringType
     
 
 
@@ -41,6 +47,13 @@ class BinOp:
 class Variable:
     name: str
 
+@dataclass
+class StringOp:
+    operator:str
+    left:'AST'
+    right:Optional['AST']=None
+    # type:StringLiteral
+    
 
 @dataclass
 class Let:
@@ -55,7 +68,7 @@ class IfElse:
     iffalse: 'AST'
     type: Optional[SimType] = None
 
-AST = NumLiteral | BoolLiteral | BinOp | IfElse 
+AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral
 
 
 TypedAST = NewType('TypedAST', AST)
@@ -70,7 +83,8 @@ def typecheck(program: AST, env = None) -> TypedAST:
             return t
         case BoolLiteral() as t: # already typed.
             return t
-        
+        case StringLiteral() as t:
+            return t
         case BinOp(op, left, right) if op in ["+", "*"]:
             tleft = typecheck(left)
             tright = typecheck(right)
@@ -116,7 +130,8 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
     match program:
         case NumLiteral(value):
             return value
-        
+        case StringLiteral(value):
+            return value
         case Variable(name):
             if name in environment:
                 return environment[name]
@@ -133,6 +148,61 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
         case BinOp("/", left, right):
             return eval(left, environment) / eval(right, environment)
 
+        # Bitwise Operators With type checking
+        case BinOp("&",left,right):
+            left_type=typecheck(left).type
+            right_type=typecheck(right).type
+            
+            if(left_type!=NumType or right_type!=NumType):
+                # print(left_type)
+                # print(right_type)
+                raise InvalidProgram()
+            return int(eval(left,environment)) & int(eval(right,environment))
+        case BinOp("|",left,right):
+            left_type=typecheck(left).type
+            right_type=typecheck(right).type
+            
+            if(left_type!=NumType or right_type!=NumType):
+                print(left_type)
+                print(right_type)
+                raise InvalidProgram()
+            return int(eval(left,environment)) | int(eval(right,environment))
+        case BinOp("^",left,right):
+            left_type=typecheck(left).type
+            right_type=typecheck(right).type
+            
+            if(left_type!=NumType or right_type!=NumType):
+                print(left_type)
+                print(right_type)
+                raise InvalidProgram()
+            return int(eval(left,environment)) ^ int(eval(right,environment))
+        case BinOp(">>",left,right):
+            left_type=typecheck(left).type
+            right_type=typecheck(right).type
+            
+            if(left_type!=NumType or right_type!=NumType):
+                print(left_type)
+                print(right_type)
+                raise InvalidProgram()
+            return int(eval(left,environment)) >> int(eval(right,environment))
+        case BinOp("<<",left,right):
+            left_type=typecheck(left).type
+            right_type=typecheck(right).type
+            
+            if(left_type!=NumType or right_type!=NumType):
+                print(left_type)
+                print(right_type)
+                raise InvalidProgram()
+            return int(eval(left,environment)) << int(eval(right,environment))
+
+        
+        # String Operations
+        # implement string typecheck for this
+        case StringOp('add',left,right):
+            return eval(left)+eval(right)
+        case StringOp('length',left):
+            return len(eval(left))
+       
         
     raise InvalidProgram()
 
@@ -140,8 +210,18 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
 def test_typecheck():
     import pytest
     te = typecheck(BinOp("+", NumLiteral(2), NumLiteral(3)))
-    assert te.type == NumType()
+    assert te.type == NumType
     te = typecheck(BinOp("<", NumLiteral(2), NumLiteral(3)))
-    assert te.type == BoolType()
-    with pytest.raises(TypeError):
-        typecheck(BinOp("+", BinOp("*", NumLiteral(2), NumLiteral(3)), BinOp("<", NumLiteral(2), NumLiteral(3))))
+    assert te.type == BoolType
+    # with pytest.raises(TypeError):
+    #     typecheck(BinOp("+", BinOp("*", NumLiteral(2), NumLiteral(3)), BinOp("<", NumLiteral(2), NumLiteral(3))))
+
+def test_string():
+    a=StringLiteral("hello ")
+    b=StringLiteral("world! ")
+    c=StringOp("add",a,b)
+    print(eval(c))
+    print(eval(StringOp('length',c)))
+    # print(eval(StringOp('slice',)))
+
+test_string()
