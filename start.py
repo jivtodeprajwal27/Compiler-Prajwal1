@@ -163,7 +163,7 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
             return eval(left, environment) % eval(right, environment)
         case BinOp("**", left, right):
             return eval(left, environment) ** eval(right, environment)
-        case BinOp("=",left,right):
+        case BinOp("==",left,right):
             return eval(left, environment) == eval(right, environment)
         case BinOp("<",left,right):
             return eval(left, environment) < eval(right, environment)
