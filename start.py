@@ -200,7 +200,7 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
             right_type=typecheck(right).type
             
             if(left_type!=NumType or right_type!=NumType):
-                print(left_type)
+                print(left_type) 
                 print(right_type)
                 raise InvalidProgram()
             return int(eval(left,environment)) ^ int(eval(right,environment))
@@ -243,8 +243,7 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
             un=eval(vari)
             un=un-1
             return eval(NumLiteral(un))
-       
-        #if-else operations
+
     raise InvalidProgram()
 
 
@@ -266,11 +265,65 @@ def test_string():
     #print(eval(StringOp('slice',)))
 
 def test_unop():
+    
     a=Variable("a")
-    e1=NumLiteral(1)
+    e1=NumLiteral(1) 
     e2=UnOp("++",e1)
     e3=UnOp("-",e1)
     e4=UnOp("--",e1)
     assert eval(e3)== -1
     assert eval(e2)==2
     assert eval(e4)== 0
+
+    a=Variable("a")
+    e1=NumLiteral(2)
+    b=NumLiteral(1)
+    e2=BinOp("+",b,BinOp("*",UnOp("--",e1),e1))     #1+((2--)*2) = 3
+    assert eval(e2)==3
+    
+    
+    e1=NumLiteral(10)
+    b=NumLiteral(5)
+    c=NumLiteral(2)
+    e2=BinOp("+",UnOp("++",e1),BinOp("*",UnOp("-",c),b))     #(10++) + ((-2)*5) = 1
+    assert eval(e2)==1
+
+    a  = Variable("a")
+    e1 = NumLiteral(5)
+    e2 = BinOp("+", a, a)
+    e3 = UnOp("++",Let(a, e1, BinOp("+", a, Let(a, e2, e2))))
+    assert eval(e3)==26
+
+def test_bit():
+    # "Bitwise AND"
+    a=NumLiteral(15)
+    b=NumLiteral(4)
+    c=BinOp("&",a,b)   
+    assert eval(c)==4
+
+    # "Bitwise OR"
+    a=NumLiteral(12)
+    b=NumLiteral(20)
+    c=BinOp("|",a,b)
+    assert eval(c)==28
+
+    # "Bitwise XOR"
+    a=NumLiteral(34)
+    b=NumLiteral(41)
+    c=BinOp("^",a,b)
+    assert eval(c)==11
+
+def test_ls_rs():
+    
+    # "Bitwise Right Shift"
+    a=NumLiteral(10)
+    b=NumLiteral(1)
+    c=BinOp(">>",a,b)
+    assert eval(c)==5
+
+    # "Bitwise Left Shift"
+    a=NumLiteral(8)
+    b=NumLiteral(3)
+    c=BinOp("<<",a,b)
+    assert eval(c)==64
+
