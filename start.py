@@ -16,7 +16,12 @@ class BoolType:
 class StringType:
     pass
 
-SimType = NumType | BoolType
+@dataclass
+class ListType:
+    pass
+
+
+SimType = NumType | BoolType | StringType | ListType
 
 @dataclass
 class NumLiteral:
@@ -74,7 +79,21 @@ class IfElse:
     iffalse: 'AST'
     type: Optional[SimType] = None
 
-AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral
+@dataclass
+class ListLiteral:
+    list_val:list
+
+@dataclass
+class ListOp:
+    operator:str
+    left:'AST'
+    right:Optional['AST']=None
+    assign:Optional['AST']=None
+    type:SimType=ListType
+
+
+
+AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|ListOp
 
 
 TypedAST = NewType('TypedAST', AST)
@@ -138,8 +157,12 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
             return value
         case Variable(name):
             if name in environment:
+                # print(f"environment: {environment}")
                 return environment[name]
             raise InvalidProgram()
+        case ListLiteral(value):
+            # print(f'values: {value}')
+            return value
         case Let(Variable(name), e1, e2):
             v1 = eval(e1, environment)
             return eval(e2, environment | { name: v1 })
@@ -163,7 +186,7 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
             return eval(left, environment) % eval(right, environment)
         case BinOp("**", left, right):
             return eval(left, environment) ** eval(right, environment)
-        case BinOp("=",left,right):
+        case BinOp("==",left,right):
             return eval(left, environment) == eval(right, environment)
         case BinOp("<",left,right):
             return eval(left, environment) < eval(right, environment)
@@ -226,23 +249,76 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
         # String Operations
         # implement string typecheck for this
         case StringOp('add',left,right):
-            return eval(left)+eval(right)
+            return eval(left,environment)+eval(right,environment)
         case StringOp('length',left):
-            return len(eval(left))
+            return len(eval(left,environment))
         
         #unary Operations
         case UnOp('-',vari):
-            un=eval(vari)
+            un=eval(vari,environment)
             un=-un
-            return eval(NumLiteral(un))
+            return eval(NumLiteral(un),environment)
         case UnOp('++',vari):
-            un=eval(vari)
+            un=eval(vari,environment)
             un=un+1
-            return eval(NumLiteral(un))
+            return eval(NumLiteral(un),environment)
         case UnOp('--',vari):
-            un=eval(vari)
+            un=eval(vari,environment)
             un=un-1
-            return eval(NumLiteral(un))
+            return eval(NumLiteral(un),environment)
+
+        # IfElse
+        case IfElse(c,l,r):
+            # if(typecheck(l)!=typecheck(r)):
+            #     return InvalidProgram()
+            
+            condition_eval=eval(c)
+            # print(typech(c))
+            print(condition_eval)
+            if(condition_eval==True):
+                return eval(l)
+                
+            else:
+                return eval(r)
+        
+        # List Operations
+        case ListOp("append",left,right):
+            
+            # if(right.type!=left.type):
+            #     raise InvalidProgram
+            l=eval(left,environment)
+            r=eval(right,environment)
+            if(type(r)==Fraction):
+                l.append(int(r))
+            else:
+                l.append(r)
+            return l
+            
+
+        case ListOp('length',left):
+            return len(eval(left))
+
+        case ListOp('assign',array,index,assign):
+            if(typecheck(assign).type!=array.type or typecheck(index).type!=NumType):
+                raise InvalidProgram
+            arr=eval(array)
+            
+            arr[int(eval(index))]=int(eval(assign))
+            return arr
+        
+        case ListOp('remove',array):
+            arr=eval(array)
+            arr.pop()
+            return arr
+
+        case ListOp('remove',array,index):
+            if(index!=NumType):
+                raise InvalidProgram
+            arr=eval(arr)
+            arr.remove(index)
+            return arr
+        
+
 
     raise InvalidProgram()
 
@@ -326,4 +402,12 @@ def test_ls_rs():
     b=NumLiteral(3)
     c=BinOp("<<",a,b)
     assert eval(c)==64
+
+# a=NumLiteral(3)
+# b=NumLiteral(4)
+# condition=BinOp("<",a,b)
+# conditonalBlock=IfElse(condition,NumLiteral(30),NumLiteral(12))
+# print(eval(conditonalBlock))
+
+# test cases for appending list
 
