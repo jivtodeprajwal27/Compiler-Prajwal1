@@ -403,11 +403,11 @@ def test_ls_rs():
     c=BinOp("<<",a,b)
     assert eval(c)==64
 
-# a=NumLiteral(3)
-# b=NumLiteral(4)
-# condition=BinOp("<",a,b)
-# conditonalBlock=IfElse(condition,NumLiteral(30),NumLiteral(12))
-# print(eval(conditonalBlock))
+a=NumLiteral(3)
+b=NumLiteral(4)
+condition=BinOp("<",a,b)
+conditonalBlock=IfElse(condition,NumLiteral(30),NumLiteral(12))
+print(eval(conditonalBlock))
 
 # test cases for appending list
 
