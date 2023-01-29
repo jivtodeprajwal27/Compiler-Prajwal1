@@ -166,13 +166,152 @@ def test_less_than_equal_operator():
     e  = Let(c, n3, Let(b, n2,e2 ))
     assert eval(e) == True
 
+def test_typecheck():
+    import pytest
+    te = typecheck(BinOp("+", NumLiteral(2), NumLiteral(3)))
+    assert te.type == NumType
+    te = typecheck(BinOp("<", NumLiteral(2), NumLiteral(3)))
+    assert te.type == BoolType
+    # with pytest.raises(TypeError):
+    #     typecheck(BinOp("+", BinOp("*", NumLiteral(2), NumLiteral(3)), BinOp("<", NumLiteral(2), NumLiteral(3))))
 
-test_div_operator()
-test_modulus_operator()
-test_power_operator()
-test_floor_div_operator()
-test_equal_operator()
-test_not_equal_operator()
-test_greter_than_operator()
-test_less_than_operator()
-test_less_than_equal_operator()
+def test_string():
+    a=StringLiteral("hello ")
+    b=StringLiteral("world! ")
+    c=StringOp("add",a,b)
+    print(eval(c))
+    print(eval(StringOp('length',c)))
+    #print(eval(StringOp('slice',)))
+
+def test_unop():
+    
+    a=Variable("a")
+    e1=NumLiteral(1) 
+    e2=UnOp("++",e1)
+    e3=UnOp("-",e1)
+    e4=UnOp("--",e1)
+    assert eval(e3)== -1
+    assert eval(e2)==2
+    assert eval(e4)== 0
+
+    a=Variable("a")
+    e1=NumLiteral(2)
+    b=NumLiteral(1)
+    e2=BinOp("+",b,BinOp("*",UnOp("--",e1),e1))     #1+((2--)*2) = 3
+    assert eval(e2)==3
+    
+    
+    e1=NumLiteral(10)
+    b=NumLiteral(5)
+    c=NumLiteral(2)
+    e2=BinOp("+",UnOp("++",e1),BinOp("*",UnOp("-",c),b))     #(10++) + ((-2)*5) = 1
+    assert eval(e2)==1
+
+    a  = Variable("a")
+    e1 = NumLiteral(5)
+    e2 = BinOp("+", a, a)
+    e3 = UnOp("++",Let(a, e1, BinOp("+", a, Let(a, e2, e2))))
+    assert eval(e3)==26
+
+def test_bit():
+    # "Bitwise AND"
+    a=NumLiteral(15)
+    b=NumLiteral(4)
+    c=BinOp("&",a,b)   
+    assert eval(c)==4
+
+    # "Bitwise OR"
+    a=NumLiteral(12)
+    b=NumLiteral(20)
+    c=BinOp("|",a,b)
+    assert eval(c)==28
+
+    # "Bitwise XOR"
+    a=NumLiteral(34)
+    b=NumLiteral(41)
+    c=BinOp("^",a,b)
+    assert eval(c)==11
+
+def test_ls_rs():
+    
+    # "Bitwise Right Shift"
+    a=NumLiteral(10)
+    b=NumLiteral(1)
+    c=BinOp(">>",a,b)
+    assert eval(c)==5
+
+    # "Bitwise Left Shift"
+    a=NumLiteral(8)
+    b=NumLiteral(3)
+    c=BinOp("<<",a,b)
+    assert eval(c)==64
+
+
+def test_cases_list_literal():
+    # test for length using Variables
+    l=ListLiteral([1,3,4])
+    l.type=NumType
+    a  = Variable("a")
+    e1 = NumLiteral(5)
+    e2 = ListOp("length",l)
+    e=Let(a,l,e2)
+    assert eval(e)==3
+    
+
+    # test case for append operations
+    e3 = ListOp("append",l,e1)
+    d=Let(a,l,e3)
+    
+    assert eval(d)==[1,3,4,5]
+    print(l.list_val)
+    f=eval(d)
+    assert f==[1,3,4,5,5]
+    assert eval(d)==[1,3,4,5,5,5]
+
+    l1=ListLiteral([23,45,12])
+    l1.type=NumType
+    l2=ListLiteral([89,93])
+    l2.type=NumType
+    a  = Variable("a")
+    e2=ListOp('append',l1,l2)
+    inp=Let(a,l1,e2)
+    assert eval(inp)==[23,45,12,[89,93]]
+
+    l1=ListLiteral([23,45,12])
+    l1.type=NumType
+    l2=ListLiteral([89,93])
+    l2.type=NumType
+    a1  = Variable("a")
+    e2=ListOp('append',l1,l2)
+    inp1=Let(a1,l1,ListOp('append',e2,NumLiteral(2000)))
+    assert eval(inp1)==[23,45,12,[89,93],2000]
+
+    # assign test
+    l1=ListLiteral([23,45,12])
+    l1.type=NumType
+    e2=ListOp('assign',l1,NumLiteral(0),NumLiteral(90))
+    assert eval(e2)==[90,45,12]
+
+    # remove test
+    l1=ListLiteral([23,45,12])
+    l1.type=NumType
+    c=ListOp('remove',l1)
+    assert eval(c)==[23,45]
+    
+
+def test_unOp():
+    v=Variable('v')
+    e1=NumLiteral(5)
+    e2=UnOp('--',v)
+    c=Let(v,e1,BinOp('*',v,Let(v,e2,e2)))
+    assert eval(c)==15
+
+# test_div_operator()
+# test_modulus_operator()
+# test_power_operator()
+# test_floor_div_operator()
+# test_equal_operator()
+# test_not_equal_operator()
+# test_greter_than_operator()
+# test_less_than_operator()
+# test_less_than_equal_operator()
