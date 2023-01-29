@@ -409,5 +409,3 @@ condition=BinOp("<",a,b)
 conditonalBlock=IfElse(condition,NumLiteral(30),NumLiteral(12))
 print(eval(conditonalBlock))
 
-# test cases for appending list
-
