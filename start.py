@@ -96,6 +96,7 @@ class ListOp:
     assign:Optional['AST']=None
     type:SimType=ListType
 
+
 AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|ListOp
 
 
@@ -261,9 +262,11 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
             return eval(left,environment)+eval(right,environment)
         case StringOp('length',left):
             return len(eval(left,environment))
+
         case StringSlice("slice", left,start, stop,step):
             left_value = eval(left, environment)
             return left_value[start:stop:step]
+
         #unary Operations
         case UnOp('-',vari):
             un=eval(vari,environment)
@@ -285,7 +288,7 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
             
             condition_eval=eval(c)
             # print(typech(c))
-            #print(condition_eval)
+
             if(condition_eval==True):
                 return eval(l)
                 
@@ -322,6 +325,12 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
             arr.pop()
             return arr
 
+
+        case ListOp('remove',array,index):
+            if(index!=NumType):
+                raise InvalidProgram
+            arr=eval(arr)
+
         case ListOp('pop',array,index):
             if(index!=NumType):
                 raise InvalidProgram
@@ -330,6 +339,7 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
             # arr[int(eval(index))]=len(arr)
             # arr[int(eval(len(arr)))]=temp
             # print(arr[int(eval(index))])
+
             arr.remove(index)
             return arr
         
@@ -418,5 +428,5 @@ def test_ls_rs():
     c=BinOp("<<",a,b)
     assert eval(c)==64
 
-# test cases for appending list
+
 
