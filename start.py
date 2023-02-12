@@ -224,8 +224,6 @@ def typecheck(program: AST, env = None) -> TypedAST:
                 raise TypeError()
             tbody = typecheck(body)
             return(tc, tbody)
-
-        #String Operations
         case StringOp('add',left,right):
             tleft=typecheck(left)
             tright=typecheck(right)
@@ -239,6 +237,7 @@ def typecheck(program: AST, env = None) -> TypedAST:
             if tleft.type!=StringType or tright.type!=StringType:
                 raise TypeError()
             return StringOp("compare",left,right,BoolType)
+
 
         case StringOp('length',left):
             tleft=typecheck(left)
@@ -323,9 +322,9 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 raise InvalidProgram()
             return  eval2(left ) %  eval2(right )
         case BinOp("**", left, right):
-            return eval(left, environment) ** eval(right, environment)
-        case BinOp("=",left,right):
-            return eval(left, environment) == eval(right, environment)
+            return  eval2(left ) **  eval2(right )
+        case BinOp("==",left,right):
+            return  eval2(left ) ==  eval2(right )
         case BinOp("<",left,right):
             return  eval2(left ) <  eval2(right )
         case BinOp(">",left,right):
@@ -385,7 +384,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return int( eval2(left )) << int( eval2(right ))
   
         # String Operations
-       
+        # implement string typecheck for this
         case StringOp('add',left,right):
             left_type=typecheck(left).type
             right_type=typecheck(right).type
@@ -500,98 +499,5 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 return bool(left_var)
             return bool(left_var)
 
-            
     raise InvalidProgram()
 
-<<<<<<< HEAD
-=======
-
-def test_typecheck():
-    import pytest
-    te = typecheck(BinOp("+", NumLiteral(2), NumLiteral(3)))
-    assert te.type == NumType
-    te = typecheck(BinOp("<", NumLiteral(2), NumLiteral(3)))
-    assert te.type == BoolType
-    # with pytest.raises(TypeError):
-    #     typecheck(BinOp("+", BinOp("*", NumLiteral(2), NumLiteral(3)), BinOp("<", NumLiteral(2), NumLiteral(3))))
-
-def test_string():
-    a=StringLiteral("hello ")
-    b=StringLiteral("world! ")
-    c=StringOp("add",a,b)
-    print(eval(c))
-    print(eval(StringOp('length',c)))
-    #print(eval(StringOp('slice',)))
-
-def test_unop():
-    
-    a=Variable("a")
-    e1=NumLiteral(1) 
-    e2=UnOp("++",e1)
-    e3=UnOp("-",e1)
-    e4=UnOp("--",e1)
-    assert eval(e3)== -1
-    assert eval(e2)==2
-    assert eval(e4)== 0
-
-    a=Variable("a")
-    e1=NumLiteral(2)
-    b=NumLiteral(1)
-    e2=BinOp("+",b,BinOp("*",UnOp("--",e1),e1))     #1+((2--)*2) = 3
-    assert eval(e2)==3
-    
-    
-    e1=NumLiteral(10)
-    b=NumLiteral(5)
-    c=NumLiteral(2)
-    e2=BinOp("+",UnOp("++",e1),BinOp("*",UnOp("-",c),b))     #(10++) + ((-2)*5) = 1
-    assert eval(e2)==1
-
-    a  = Variable("a")
-    e1 = NumLiteral(5)
-    e2 = BinOp("+", a, a)
-    e3 = UnOp("++",Let(a, e1, BinOp("+", a, Let(a, e2, e2))))
-    assert eval(e3)==26
-
-def test_bit():
-    # "Bitwise AND"
-    a=NumLiteral(15)
-    b=NumLiteral(4)
-    c=BinOp("&",a,b)   
-    assert eval(c)==4
-
-    # "Bitwise OR"
-    a=NumLiteral(12)
-    b=NumLiteral(20)
-    c=BinOp("|",a,b)
-    assert eval(c)==28
-
-    # "Bitwise XOR"
-    a=NumLiteral(34)
-    b=NumLiteral(41)
-    c=BinOp("^",a,b)
-    assert eval(c)==11
-
-def test_ls_rs():
-    
-    # "Bitwise Right Shift"
-    a=NumLiteral(10)
-    b=NumLiteral(1)
-    c=BinOp(">>",a,b)
-    assert eval(c)==5
-
-    # "Bitwise Left Shift"
-    a=NumLiteral(8)
-    b=NumLiteral(3)
-    c=BinOp("<<",a,b)
-    assert eval(c)==64
-
-a=NumLiteral(3)
-b=NumLiteral(4)
-condition=BinOp("<",a,b)
-conditonalBlock=IfElse(condition,NumLiteral(30),NumLiteral(12))
-print(eval(conditonalBlock))
-
-# test cases for appending list
-
->>>>>>> parent of 8d89b37 (added list literal and methods like append length assign remove remove(with index) and have written test cases for assign and append. Also implemented ifelse and implemented complicated test case of uniary operators)
