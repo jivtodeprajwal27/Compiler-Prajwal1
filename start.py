@@ -21,13 +21,35 @@ class StringType:
 class ListType:
     pass
 
+@dataclass
+class IntType:
+    pass
 
-SimType = NumType | BoolType | StringType | ListType
+@dataclass 
+class FracType:
+    pass
+
+
+SimType = NumType | BoolType | StringType | ListType | IntType | FracType
 
 @dataclass
 class NumLiteral:
     value: Fraction
     type: SimType = NumType
+    def __init__(self, *args):
+        self.value = Fraction(*args)
+
+@dataclass 
+class IntLiteral:
+    value: int
+    type: SimType=IntType
+    def __init__(self, *args):
+        self.value = int(*args)
+
+@dataclass 
+class FracLiteral:
+    value: Fraction
+    type: SimType=FracType
     def __init__(self, *args):
         self.value = Fraction(*args)
 
@@ -41,9 +63,6 @@ class StringLiteral:
     value: str
     type: SimType=StringType
     
-@dataclass
-class Un_boolify:
-    left:'AST'
 
 @dataclass
 class BinOp:
@@ -60,6 +79,7 @@ class Variable:
 class UnOp:
     operator: str
     vari : int
+    type : SimType= NumType
 
 
 @dataclass
@@ -120,10 +140,8 @@ class Seq:
     things: List['AST']
 
 @dataclass
-class Whilethen:
-    condition: 'AST'
-    then_body: 'AST'
-    type : Optional[SimType] = None
+class PrintOp:
+    inp: 'AST'
 
 class Environment:
     envs: List
@@ -155,7 +173,7 @@ class Environment:
                 return
         raise KeyError()
 
-AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|ListOp| Get | Put |Let | LetMut |Seq | Whilethen
+AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|IntLiteral|FracLiteral|PrintOp| ListOp| Get | Put |Let | LetMut |Seq 
 
 Value = Fraction
 
@@ -173,6 +191,10 @@ def typecheck(program: AST, env = None) -> TypedAST:
             return t
         case StringLiteral() as t:
             return t
+        case IntLiteral() as t:
+            return t
+        case FracLiteral() as t:
+            return t
         case BinOp(op, left, right) if op in ["+", "*"]:
             tleft = typecheck(left)
             tright = typecheck(right)
@@ -182,6 +204,21 @@ def typecheck(program: AST, env = None) -> TypedAST:
                 print(f"right: {tright}.type")
                 raise TypeError()
             return BinOp(op, left, right, NumType)
+
+        case BinOp(op, left, right) if op in ["/"]:
+            tleft = typecheck(left)
+            tright = typecheck(right)
+            
+            if tleft.type != IntType or tright.type != IntType:
+                print(f"left: {tleft}.type")
+                print(f"right: {tright}.type")
+                raise TypeError()
+            elif tleft.type != FracType or tright.type != FracType:
+                print(f"left: {tleft}.type")
+                print(f"right: {tright}.type")
+                raise TypeError()
+            return BinOp(op, left, right, tleft.type)
+
         case BinOp("<", left, right):
             tleft = typecheck(left)
             tright = typecheck(right)
@@ -194,6 +231,26 @@ def typecheck(program: AST, env = None) -> TypedAST:
             if tleft.type != tright.type:
                 raise TypeError()
             return BinOp("=", left, right, BoolType)
+
+        case UnOp('-',vari):
+            tvari=typecheck(vari)
+            if tvari.type != NumType:
+                raise TypeError() 
+            return UnOp("++",vari,NumType)
+            
+        case UnOp('++',vari):
+            tvari=typecheck(vari)
+            if tvari.type != NumType:
+                raise TypeError()
+            return UnOp("++",vari,NumType)
+            
+        case UnOp('--',vari):
+            tvari=typecheck(vari)
+            if tvari.type != NumType:
+                raise TypeError()
+            return UnOp("++",vari,NumType)
+            
+
         case IfElse(c, t, f): # We have to typecheck both branches.
             tc = typecheck(c)
             if tc.type != BoolType:
@@ -208,11 +265,12 @@ def typecheck(program: AST, env = None) -> TypedAST:
             if tleft.type != StringType:
                 raise TypeError()
             return StringSlice("slice", left, start, stop, step, StringType)
-        case Un_boolify(left):
-            tleft=typecheck(left)
-            if tleft.type!=NumType or StringType:
+
+        case PrintOp(inp):
+            if inp==None:
                 raise TypeError()
-            return Un_boolify(left)
+
+        
     raise TypeError()
 
 
@@ -234,6 +292,10 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case NumLiteral(value):
             return value
         case StringLiteral(value):
+            return value
+        case IntLiteral(value):
+            return value
+        case FracLiteral(value):
             return value
         case Variable(name):
             return environment.get(name)
@@ -273,7 +335,19 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case BinOp("/", left, right):
             if(right==0):
                 raise InvalidProgram()
-            return  eval2(left ) /  eval2(right )
+            left_type=typecheck(left).type
+            right_type=typecheck(right).type
+            if (left_type==NumType and right_type== NumType):
+                return  eval2(left ) /  eval2(right )
+            elif(left_type==IntType and right_type== IntType):
+                return int(int(eval2(left )) /  int(eval2(right )))
+            elif(left_type==FracType and right_type== FracType):
+                return  Fraction(Fraction(eval2(left )) /  Fraction(eval2(right )))
+            else:
+                # print(left_type)
+                # print(right_type)
+                raise TypeError()
+            
         case BinOp("//", left, right):
             if(right==0):
                 raise InvalidProgram()
@@ -369,6 +443,11 @@ def eval(program: AST, environment: Environment = None) -> Value:
             un=un-1
             return  eval2(NumLiteral(un) )
 
+        #print Operation
+        case PrintOp(inp):
+            print(inp)
+            return inp
+
         # IfElse
         case IfElse(c,l,r):
             # if(typecheck(l)!=typecheck(r)):
@@ -430,44 +509,6 @@ def eval(program: AST, environment: Environment = None) -> Value:
 
             arr.remove(index)
             return arr
-        
-        case Whilethen(condi, body):
-            # condi_check =
-            # while(eval2(condi)==True):
-            #     eval2(body)
-            #     print(eval2(body))
-            if(eval2(condi)==True):
-                eval2(body)
-                Whilethen(condi,)
-            else :
-                return
-        case Un_boolify(left):
-            left_var=eval(left,environment)
-            if left_var==0:
-                return bool(left_var)
-            elif left_var:
-                return bool(left_var)
-            elif len(left_var)==0:
-                return bool(left_var)
-            return bool(left_var)
 
     raise InvalidProgram()
 
-
-
-def test_while():
-    a  = Variable("a")
-    n1 = NumLiteral(9)
-    b  = Variable("b")
-    n2 = NumLiteral(2)
-    bin1 = BinOp("-", a, b)
-    e  = Let(a, n1, Let(b, n2, bin1))  
-    bin2 = BinOp(">", a, b)
-    condi  = Let(a, n1, Let(b, n2, bin2))
-    # a = eval(e2)
-    # print(a)
-    condi_Block = Whilethen(condi,e)
-    print(eval(condi_Block))
-    
-
-# test_while()
