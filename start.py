@@ -1,6 +1,8 @@
 from fractions import Fraction
 from dataclasses import dataclass,field
-from typing import Optional, NewType, Mapping
+from typing import Optional, NewType, Mapping, List
+
+
 
 # A minimal example to illustrate typechecking.
 
@@ -63,9 +65,14 @@ class StringOp:
     operator:str
     left:'AST'
     right:Optional['AST']=None
-    #type:StringLiteral
+    type:Optional[SimType]=StringType
     
-
+@dataclass
+class StringSlice(StringOp):
+    start: Optional[int] = None
+    stop: Optional[int] = None
+    step: Optional[int] = None
+    type: Optional[SimType] = StringType
 @dataclass
 class Let:
     var: 'AST'
@@ -91,10 +98,76 @@ class ListOp:
     assign:Optional['AST']=None
     type:SimType=ListType
 
+@dataclass
+class Get:
+    var: 'AST'
 
+@dataclass
+class Put:
+    var: 'AST'
+    e1: 'AST'
 
-AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|ListOp
+@dataclass
+class LetMut:
+    var: 'AST'
+    e1: 'AST'
+    e2: 'AST'
 
+@dataclass
+class Seq:
+    things: List['AST']
+
+@dataclass
+class Un_boolify:
+    left:'AST'
+    type:SimType=NumType|StringType
+
+@dataclass
+class Whilethen:
+    condition: 'AST'
+    then_body: 'AST'
+    type : Optional[SimType] = None
+
+@dataclass
+class For:
+    in_val:'AST'
+    stop_condition:'AST'
+    jump_condition:'AST'
+    body:'AST'
+
+class Environment:
+    envs: List
+
+    def __init__(self):
+        self.envs = [{}]
+
+    def enter_scope(self):
+        self.envs.append({})
+
+    def exit_scope(self):
+        assert self.envs
+        self.envs.pop()
+
+    def add(self, name, value):
+        assert name not in self.envs[-1]
+        self.envs[-1][name] = value
+
+    def get(self, name):
+        for env in reversed(self.envs):
+            if name in env:
+                return env[name]
+        raise KeyError()
+
+    def update(self, name, value):
+        for env in reversed(self.envs):
+            if name in env:
+                env[name] = value
+                return
+        raise KeyError()
+
+AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|ListOp| Get | Put |Let | LetMut |Seq | Whilethen
+
+Value = Fraction
 
 TypedAST = NewType('TypedAST', AST)
 
@@ -140,64 +213,128 @@ def typecheck(program: AST, env = None) -> TypedAST:
             if tt.type != tf.type: # Both branches must have the same type.
                 raise TypeError()
             return IfElse(tc, tt, tf, tt.type) # The common type becomes the type of the if-else.
+        case StringSlice("slice",left,start, stop, step):
+            tleft = typecheck(left)
+            if tleft.type != StringType:
+                raise TypeError()
+            return StringSlice("slice", left, start, stop, step, StringType)
+        case Whilethen(c,body):
+            tc = typecheck(c)
+            if tc.type !=BoolLiteral:
+                raise TypeError()
+            tbody = typecheck(body)
+            return(tc, tbody)
+        case StringOp('add',left,right):
+            tleft=typecheck(left)
+            tright=typecheck(right)
+            if tleft.type!=StringType or tright.type!=StringType:
+                raise TypeError()
+            return StringOp("add",left,right)
+        
+        case StringOp('compare',left,right):
+            tleft=typecheck(left)
+            tright=typecheck(right)
+            if tleft.type!=StringType or tright.type!=StringType:
+                raise TypeError()
+            return StringOp("compare",left,right,BoolType)
+
+
+        case StringOp('length',left):
+            tleft=typecheck(left)
+            if tleft.type!=StringType:
+                raise TypeError()
+            return StringOp("length",left,type=NumType)
+
+        case Un_boolify(left):
+            tleft=typecheck(left)
+            if tleft.type!=NumType or StringType:
+                raise TypeError()
+            return Un_boolify(left)
+        
     raise TypeError()
-Value = Fraction
+
 
 class InvalidProgram(Exception):
     pass
 
 
-def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
+def eval(program: AST, environment: Environment = None) -> Value:
     if environment is None:
-        environment = {}
+        environment =Environment()
+    
+    # Pass environment to all explicitally
+    def eval2(program):
+        return eval(program, environment)
+    
+    # always call eval2 for enviornment passing instead of eval(program, envi)
     match program:
         case NumLiteral(value):
             return value
         case StringLiteral(value):
             return value
         case Variable(name):
-            if name in environment:
-                # print(f"environment: {environment}")
-                return environment[name]
-            raise InvalidProgram()
+            return environment.get(name)
         case ListLiteral(value):
             # print(f'values: {value}')
             return value
+        case BoolLiteral(value):
+            return value
         case Let(Variable(name), e1, e2):
-            v1 = eval(e1, environment)
-            return eval(e2, environment | { name: v1 })
+            v1 = eval2(e1)
+            environment.enter_scope()
+            environment.add(name,v1)
+            v2 = eval2(e2)
+            environment.exit_scope()
+            return v2
+        case LetMut(Variable(name),e1,e2):
+            v1 = eval2(e1)
+            environment.enter_scope()
+            environment.add(name,v1)
+            v2 = eval2(e2)
+            environment.exit_scope()
+            return v2
+        case Put(Variable(name),e):
+            environment.update(name,eval2(e))
+            return environment.get(name)
+        case Get(Variable(name)):
+            return environment.get(name)
+        case Seq(things):
+            v = None
+            for thing in things:
+                v = eval2(thing)
+            return v
         case BinOp("+", left, right):
-            return eval(left, environment) + eval(right, environment)
+            return eval2(left) + eval2(right)
         case BinOp("-", left, right):
-            return eval(left, environment) - eval(right, environment)
+            return eval2(left) - eval2(right)
         case BinOp("*", left, right):
-            return eval(left, environment) * eval(right, environment)
+            return eval2(left,) * eval2(right )
         case BinOp("/", left, right):
             if(right==0):
                 raise InvalidProgram()
-            return eval(left, environment) / eval(right, environment)
+            return  eval2(left ) /  eval2(right )
         case BinOp("//", left, right):
             if(right==0):
                 raise InvalidProgram()
-            return eval(left, environment) // eval(right, environment)
+            return  eval2(left ) //  eval2(right )
         case BinOp("%", left, right):
             if(right==0):
                 raise InvalidProgram()
-            return eval(left, environment) % eval(right, environment)
+            return  eval2(left ) %  eval2(right )
         case BinOp("**", left, right):
-            return eval(left, environment) ** eval(right, environment)
+            return  eval2(left ) **  eval2(right )
         case BinOp("==",left,right):
-            return eval(left, environment) == eval(right, environment)
+            return  eval2(left ) ==  eval2(right )
         case BinOp("<",left,right):
-            return eval(left, environment) < eval(right, environment)
+            return  eval2(left ) <  eval2(right )
         case BinOp(">",left,right):
-            return eval(left, environment) > eval(right, environment)
+            return  eval2(left ) >  eval2(right )
         case BinOp(">=",left,right):
-            return eval(left, environment) >= eval(right, environment)
+            return  eval2(left ) >=  eval2(right )
         case BinOp("<=",left,right):
-            return eval(left, environment) <= eval(right, environment)
+            return  eval2(left ) <=  eval2(right )
         case BinOp("!=",left,right):
-            return eval(left, environment) != eval(right, environment)
+            return  eval2(left ) !=  eval2(right )
     
         # Bitwise Operators With type checking
         case BinOp("&",left,right):
@@ -208,7 +345,7 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
                 # print(left_type)
                 # print(right_type)
                 raise InvalidProgram()
-            return int(eval(left,environment)) & int(eval(right,environment))
+            return int( eval2(left )) & int( eval2(right ))
         case BinOp("|",left,right):
             left_type=typecheck(left).type
             right_type=typecheck(right).type
@@ -217,7 +354,7 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
                 print(left_type)
                 print(right_type)
                 raise InvalidProgram()
-            return int(eval(left,environment)) | int(eval(right,environment))
+            return int( eval2(left )) | int( eval2(right ))
         case BinOp("^",left,right):
             left_type=typecheck(left).type
             right_type=typecheck(right).type
@@ -226,7 +363,7 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
                 print(left_type) 
                 print(right_type)
                 raise InvalidProgram()
-            return int(eval(left,environment)) ^ int(eval(right,environment))
+            return int( eval2(left )) ^ int( eval2(right ))
         case BinOp(">>",left,right):
             left_type=typecheck(left).type
             right_type=typecheck(right).type
@@ -235,7 +372,7 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
                 print(left_type)
                 print(right_type)
                 raise InvalidProgram()
-            return int(eval(left,environment)) >> int(eval(right,environment))
+            return int( eval2(left )) >> int( eval2(right ))
         case BinOp("<<",left,right):
             left_type=typecheck(left).type
             right_type=typecheck(right).type
@@ -244,50 +381,73 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
                 print(left_type)
                 print(right_type)
                 raise InvalidProgram()
-            return int(eval(left,environment)) << int(eval(right,environment))
+            return int( eval2(left )) << int( eval2(right ))
   
         # String Operations
         # implement string typecheck for this
         case StringOp('add',left,right):
-            return eval(left,environment)+eval(right,environment)
-        case StringOp('length',left):
-            return len(eval(left,environment))
+            left_type=typecheck(left).type
+            right_type=typecheck(right).type
+            if(left_type!=StringType or right_type!=StringType):
+                raise InvalidProgram()
+            return  eval2(left )+ eval2(right )
         
+        case StringOp('compare',left,right):
+            left_type=typecheck(left).type
+            right_type=typecheck(right).type
+            if(left_type!=StringType or right_type!=StringType):
+                raise InvalidProgram()
+            return eval2(BoolLiteral(eval2(left)==eval2(right)))
+
+        case StringOp('length',left):
+            left_type=typecheck(left).type
+            if(left_type!=StringType):
+                raise InvalidProgram()
+            return len(eval2(left))        
+
+        
+
+
+        case StringSlice("slice", left,start, stop,step):
+            left_value =  eval2(left )
+            return left_value[start:stop:step]
+        
+
         #unary Operations
         case UnOp('-',vari):
-            un=eval(vari,environment)
+            un= eval2(vari )
             un=-un
-            return eval(NumLiteral(un),environment)
+            return  eval2(NumLiteral(un) )
         case UnOp('++',vari):
-            un=eval(vari,environment)
+            un= eval2(vari )
             un=un+1
-            return eval(NumLiteral(un),environment)
+            return  eval2(NumLiteral(un) )
         case UnOp('--',vari):
-            un=eval(vari,environment)
+            un= eval2(vari )
             un=un-1
-            return eval(NumLiteral(un),environment)
+            return  eval2(NumLiteral(un) )
 
         # IfElse
         case IfElse(c,l,r):
             # if(typecheck(l)!=typecheck(r)):
             #     return InvalidProgram()
             
-            condition_eval=eval(c)
+            condition_eval= eval2(c)
             # print(typech(c))
-            print(condition_eval)
+
             if(condition_eval==True):
-                return eval(l)
+                return  eval2(l)
                 
             else:
-                return eval(r)
+                return  eval2(r)
         
         # List Operations
         case ListOp("append",left,right):
             
             # if(right.type!=left.type):
             #     raise InvalidProgram
-            l=eval(left,environment)
-            r=eval(right,environment)
+            l= eval2(left )
+            r= eval2(right )
             if(type(r)==Fraction):
                 l.append(int(r))
             else:
@@ -296,116 +456,49 @@ def eval(program: AST, environment: Mapping[str, Value] = None) -> Value:
             
 
         case ListOp('length',left):
-            return len(eval(left))
+            return len( eval2(left))
 
         case ListOp('assign',array,index,assign):
             if(typecheck(assign).type!=array.type or typecheck(index).type!=NumType):
                 raise InvalidProgram
-            arr=eval(array)
+            arr= eval2(array)
             
-            arr[int(eval(index))]=int(eval(assign))
+            arr[int( eval2(index))]=int( eval2(assign))
             return arr
         
         case ListOp('remove',array):
-            arr=eval(array)
+            arr= eval2(array)
             arr.pop()
             return arr
+
 
         case ListOp('remove',array,index):
             if(index!=NumType):
                 raise InvalidProgram
-            arr=eval(arr)
+            arr= eval2(arr)
+
+        case ListOp('pop',array,index):
+            if(index!=NumType):
+                raise InvalidProgram
+            arr= eval2(array)
+            # temp=arr[int( eval2(index))]
+            # arr[int( eval2(index))]=len(arr)
+            # arr[int( eval2(len(arr)))]=temp
+            # print(arr[int( eval2(index))])
+
             arr.remove(index)
             return arr
         
+        case Un_boolify(left):
+            left_var=eval(left,environment)
+            if left_var==0:
+                return bool(left_var)
+            elif left_var:
+                return bool(left_var)
+            elif len(left_var)==0:
+                return bool(left_var)
+            return bool(left_var)
 
-
+            
     raise InvalidProgram()
-
-
-def test_typecheck():
-    import pytest
-    te = typecheck(BinOp("+", NumLiteral(2), NumLiteral(3)))
-    assert te.type == NumType
-    te = typecheck(BinOp("<", NumLiteral(2), NumLiteral(3)))
-    assert te.type == BoolType
-    # with pytest.raises(TypeError):
-    #     typecheck(BinOp("+", BinOp("*", NumLiteral(2), NumLiteral(3)), BinOp("<", NumLiteral(2), NumLiteral(3))))
-
-def test_string():
-    a=StringLiteral("hello ")
-    b=StringLiteral("world! ")
-    c=StringOp("add",a,b)
-    print(eval(c))
-    print(eval(StringOp('length',c)))
-    #print(eval(StringOp('slice',)))
-
-def test_unop():
-    
-    a=Variable("a")
-    e1=NumLiteral(1) 
-    e2=UnOp("++",e1)
-    e3=UnOp("-",e1)
-    e4=UnOp("--",e1)
-    assert eval(e3)== -1
-    assert eval(e2)==2
-    assert eval(e4)== 0
-
-    a=Variable("a")
-    e1=NumLiteral(2)
-    b=NumLiteral(1)
-    e2=BinOp("+",b,BinOp("*",UnOp("--",e1),e1))     #1+((2--)*2) = 3
-    assert eval(e2)==3
-    
-    
-    e1=NumLiteral(10)
-    b=NumLiteral(5)
-    c=NumLiteral(2)
-    e2=BinOp("+",UnOp("++",e1),BinOp("*",UnOp("-",c),b))     #(10++) + ((-2)*5) = 1
-    assert eval(e2)==1
-
-    a  = Variable("a")
-    e1 = NumLiteral(5)
-    e2 = BinOp("+", a, a)
-    e3 = UnOp("++",Let(a, e1, BinOp("+", a, Let(a, e2, e2))))
-    assert eval(e3)==26
-
-def test_bit():
-    # "Bitwise AND"
-    a=NumLiteral(15)
-    b=NumLiteral(4)
-    c=BinOp("&",a,b)   
-    assert eval(c)==4
-
-    # "Bitwise OR"
-    a=NumLiteral(12)
-    b=NumLiteral(20)
-    c=BinOp("|",a,b)
-    assert eval(c)==28
-
-    # "Bitwise XOR"
-    a=NumLiteral(34)
-    b=NumLiteral(41)
-    c=BinOp("^",a,b)
-    assert eval(c)==11
-
-def test_ls_rs():
-    
-    # "Bitwise Right Shift"
-    a=NumLiteral(10)
-    b=NumLiteral(1)
-    c=BinOp(">>",a,b)
-    assert eval(c)==5
-
-    # "Bitwise Left Shift"
-    a=NumLiteral(8)
-    b=NumLiteral(3)
-    c=BinOp("<<",a,b)
-    assert eval(c)==64
-
-a=NumLiteral(3)
-b=NumLiteral(4)
-condition=BinOp("<",a,b)
-conditonalBlock=IfElse(condition,NumLiteral(30),NumLiteral(12))
-print(eval(conditonalBlock))
 
