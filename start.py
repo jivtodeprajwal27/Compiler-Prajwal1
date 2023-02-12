@@ -218,12 +218,7 @@ def typecheck(program: AST, env = None) -> TypedAST:
             if tleft.type != StringType:
                 raise TypeError()
             return StringSlice("slice", left, start, stop, step, StringType)
-        case Whilethen(c,body):
-            tc = typecheck(c)
-            if tc.type !=BoolLiteral:
-                raise TypeError()
-            tbody = typecheck(body)
-            return(tc, tbody)
+        
         case StringOp('add',left,right):
             tleft=typecheck(left)
             tright=typecheck(right)
@@ -481,10 +476,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
             if(index!=NumType):
                 raise InvalidProgram
             arr= eval2(array)
-            # temp=arr[int( eval2(index))]
-            # arr[int( eval2(index))]=len(arr)
-            # arr[int( eval2(len(arr)))]=temp
-            # print(arr[int( eval2(index))])
+            
 
             arr.remove(index)
             return arr
@@ -499,8 +491,5 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 return bool(left_var)
             return bool(left_var)
 
-        
     raise InvalidProgram()
-
-
 
