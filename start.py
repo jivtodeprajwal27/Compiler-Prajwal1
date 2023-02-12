@@ -224,6 +224,8 @@ def typecheck(program: AST, env = None) -> TypedAST:
                 raise TypeError()
             tbody = typecheck(body)
             return(tc, tbody)
+
+        #String Operations
         case StringOp('add',left,right):
             tleft=typecheck(left)
             tright=typecheck(right)
@@ -237,7 +239,6 @@ def typecheck(program: AST, env = None) -> TypedAST:
             if tleft.type!=StringType or tright.type!=StringType:
                 raise TypeError()
             return StringOp("compare",left,right,BoolType)
-
 
         case StringOp('length',left):
             tleft=typecheck(left)
@@ -322,9 +323,9 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 raise InvalidProgram()
             return  eval2(left ) %  eval2(right )
         case BinOp("**", left, right):
-            return  eval2(left ) **  eval2(right )
-        case BinOp("==",left,right):
-            return  eval2(left ) ==  eval2(right )
+            return eval(left, environment) ** eval(right, environment)
+        case BinOp("=",left,right):
+            return eval(left, environment) == eval(right, environment)
         case BinOp("<",left,right):
             return  eval2(left ) <  eval2(right )
         case BinOp(">",left,right):
@@ -384,7 +385,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return int( eval2(left )) << int( eval2(right ))
   
         # String Operations
-        # implement string typecheck for this
+       
         case StringOp('add',left,right):
             left_type=typecheck(left).type
             right_type=typecheck(right).type
