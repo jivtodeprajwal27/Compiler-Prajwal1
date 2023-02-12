@@ -4,7 +4,7 @@ def test_typecheck():
     import pytest
     te = typecheck(BinOp("+", NumLiteral(2), NumLiteral(3)))
     assert te.type == NumType
-    te = typecheck(BinOp("*", NumLiteral(2), NumLiteral(3)))
+    te = typecheck(BinOp("<", NumLiteral(2), NumLiteral(3)))
     assert te.type == BoolType
     # with pytest.raises(TypeError):
     #     typecheck(BinOp("+", BinOp("*", NumLiteral(2), NumLiteral(3)), BinOp("<", NumLiteral(2), NumLiteral(3))))
@@ -481,65 +481,6 @@ def test_unOp():
     c=Let(v,e1,BinOp('*',v,Let(v,e2,e2)))
     assert eval(c)==15
 
-def test_letmut():
-    a = Variable("a")
-    b = Variable("b")
-    e1 = LetMut(b, NumLiteral(2), Put(a, BinOp("+", Get(a), Get(b))))
-    e2 = LetMut(a, NumLiteral(1), Seq([e1, Get(a)]))
-    print(eval(e2))
-    assert eval(e2) == 3
-
-
-def test_let_eval():
-    a  = Variable("a")
-    e1 = NumLiteral(5)
-    e2 = BinOp("+", a, a)
-    e  = Let(a, e1, e2)
-    assert eval(e) == 10
-    e  = Let(a, e1, Let(a, e2, e2))
-    assert eval(e) == 20
-    e  = Let(a, e1, BinOp("+", a, Let(a, e2, e2)))
-    assert eval(e) == 25
-    e  = Let(a, e1, BinOp("+", Let(a, e2, e2), a))
-    assert eval(e) == 25
-    e3 = NumLiteral(6)
-    e  = BinOp("+", Let(a, e1, e2), Let(a, e3, e2))
-    assert eval(e) == 22
-
-def test_bit():
-    # "Bitwise AND"
-    a=NumLiteral(15)
-    b=NumLiteral(4)
-    c=BinOp("&",a,b)   
-    assert eval(c)==4
-
-    # "Bitwise OR"
-    a=NumLiteral(12)
-    b=NumLiteral(20)
-    c=BinOp("|",a,b)
-    assert eval(c)==28
-
-    # "Bitwise XOR"
-    a=NumLiteral(34)
-    b=NumLiteral(41)
-    c=BinOp("^",a,b)
-    assert eval(c)==11
-
-def test_ls_rs():
-    
-    # "Bitwise Right Shift"
-    a=NumLiteral(10)
-    b=NumLiteral(1)
-    c=BinOp(">>",a,b)
-    assert eval(c)==5
-
-    # "Bitwise Left Shift"
-    a=NumLiteral(8)
-    b=NumLiteral(3)
-    c=BinOp("<<",a,b)
-    assert eval(c)==64
-
-# test_let_eval()
 # test_div_operator()
 # test_modulus_operator()
 # test_power_operator()
@@ -549,12 +490,22 @@ def test_ls_rs():
 # test_greter_than_operator()
 # test_less_than_operator()
 # test_less_than_equal_operator()
-# test_string()
-# # test_UnBoolify()
-# test_if_Else()
-# test_list()
-# test_unop()
-# test_ls_rs()
-# test_bit()
+
+test_div_operator()
+test_modulus_operator()
+test_power_operator()
+test_floor_div_operator()
+test_equal_operator()
+test_not_equal_operator()
+test_greter_than_operator()
+test_less_than_operator()
+test_less_than_equal_operator()
+test_string()
+test_UnBoolify()
+test_if_Else()
+test_list()
+test_unop()
+test_ls_rs()
+test_bit()
     
-# test_typecheck()
+
