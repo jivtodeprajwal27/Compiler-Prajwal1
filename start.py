@@ -421,16 +421,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
             arr.remove(index)
             return arr
         
-        case Whilethen(condi, body):
-            # condi_check =
-            # while(eval2(condi)==True):
-            #     eval2(body)
-            #     print(eval2(body))
-            if(eval2(condi)==True):
-                eval2(body)
-                return Whilethen(condi,body)
-            else :
-                return
+        
 
     raise InvalidProgram()
 
