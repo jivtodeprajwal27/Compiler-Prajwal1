@@ -3,8 +3,10 @@ from dataclasses import dataclass,field
 from typing import Optional, NewType, Mapping, List
 
 
+# A minimal example to illustrate typechecking.
+
 @dataclass
-class NumType: 
+class NumType:
     pass
 
 @dataclass
@@ -21,10 +23,6 @@ class ListType:
 
 
 SimType = NumType | BoolType | StringType | ListType
-
-''' 
-Here will be parser
-'''
 
 @dataclass
 class NumLiteral:
@@ -43,6 +41,9 @@ class StringLiteral:
     value: str
     type: SimType=StringType
     
+@dataclass
+class Un_boolify:
+    left:'AST'
 
 @dataclass
 class BinOp:
@@ -160,14 +161,10 @@ Value = Fraction
 
 TypedAST = NewType('TypedAST', AST)
 
-Binary_operators  = "+ - * / % ** // ".split()
-Binary_operators_comparision = "== != < > <= >=".split()
-
-comp_type = NumType | StringType
-
 class TypeError(Exception):
     pass
 
+# Since we don't have variables, environment is not needed.
 def typecheck(program: AST, env = None) -> TypedAST:
     match program:
         case NumLiteral() as t: # already typed.
@@ -176,25 +173,27 @@ def typecheck(program: AST, env = None) -> TypedAST:
             return t
         case StringLiteral() as t:
             return t
-        case BinOp(op, left, right) if op in   Binary_operators or Binary_operators_comparision:
+        case BinOp(op, left, right) if op in ["+", "*"]:
             tleft = typecheck(left)
             tright = typecheck(right)
-            # print(tleft,tright)
             
-            if op in Binary_operators:
-                if tleft.type != NumType or tright.type != NumType:
-                    # print(f"left: {tleft}.type")
-                    # print(f"right: {tright}.type")
-                    raise TypeError()
-                return BinOp(op, left, right, NumType)
-            else:
-                if(tleft.type == NumType and tright.type == NumType):
-                    return BinOp(op, left, right, BoolType)
-                if(tleft.type == StringType and tright.type == StringType):
-                    return BinOp(op,left,right,BoolType)
+            if tleft.type != NumType or tright.type != NumType:
+                print(f"left: {tleft}.type")
+                print(f"right: {tright}.type")
                 raise TypeError()
-  
-    
+            return BinOp(op, left, right, NumType)
+        case BinOp("<", left, right):
+            tleft = typecheck(left)
+            tright = typecheck(right)
+            if tleft.type != NumType or tright.type != NumType:
+                raise TypeError()
+            return BinOp("<", left, right, BoolType)
+        case BinOp("=", left, right):
+            tleft = typecheck(left)
+            tright = typecheck(right)
+            if tleft.type != tright.type:
+                raise TypeError()
+            return BinOp("=", left, right, BoolType)
         case IfElse(c, t, f): # We have to typecheck both branches.
             tc = typecheck(c)
             if tc.type != BoolType:
@@ -204,8 +203,30 @@ def typecheck(program: AST, env = None) -> TypedAST:
             if tt.type != tf.type: # Both branches must have the same type.
                 raise TypeError()
             return IfElse(tc, tt, tf, tt.type) # The common type becomes the type of the if-else.
-    
+        case StringSlice("slice",left,start, stop, step):
+            tleft = typecheck(left)
+            if tleft.type != StringType:
+                raise TypeError()
+            return StringSlice("slice", left, start, stop, step, StringType)
+        case Un_boolify(left):
+            tleft=typecheck(left)
+            if tleft.type!=NumType or StringType:
+                raise TypeError()
+            return Un_boolify(left)
+        case ListLiteral(list_var):
+            tlist_var=typecheck(list_var)
+            if tlist_var!=List:
+                raise TypeError()
+            return ListLiteral(list_var)
+        case ListOp(operator,left,right,assign):
+            tleft=typecheck(left)
+            tright=typecheck(right)
+            if tleft!=tright:
+                raise TypeError()
+            return ListOp(operator,left,right,assign)
     raise TypeError()
+
+
 
 class InvalidProgram(Exception):
     pass
@@ -235,14 +256,14 @@ def eval(program: AST, environment: Environment = None) -> Value:
             environment.enter_scope()
             environment.add(name,v1)
             v2 = eval2(e2)
-            # environment.exit_scope()
+            environment.exit_scope()
             return v2
         case LetMut(Variable(name),e1,e2):
             v1 = eval2(e1)
             environment.enter_scope()
             environment.add(name,v1)
             v2 = eval2(e2)
-            # environment.exit_scope()
+            environment.exit_scope()
             return v2
         case Put(Variable(name),e):
             environment.update(name,eval2(e))
@@ -388,6 +409,8 @@ def eval(program: AST, environment: Environment = None) -> Value:
             
 
         case ListOp('length',left):
+            if len(eval2(left))!=NumType:
+                raise InvalidProgram
             return len( eval2(left))
 
         case ListOp('assign',array,index,assign):
@@ -407,6 +430,8 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case ListOp('remove',array,index):
             if(index!=NumType):
                 raise InvalidProgram
+            if(index >= len(eval2(array))):
+                raise InvalidProgram
             arr= eval2(arr)
 
         case ListOp('pop',array,index):
@@ -421,8 +446,43 @@ def eval(program: AST, environment: Environment = None) -> Value:
             arr.remove(index)
             return arr
         
-        
+        case Whilethen(condi, body):
+            # condi_check =
+            # while(eval2(condi)==True):
+            #     eval2(body)
+            #     print(eval2(body))
+            if(eval2(condi)==True):
+                eval2(body)
+                Whilethen(condi,)
+            else :
+                return
+        case Un_boolify(left):
+            left_var=eval(left,environment)
+            if left_var==0:
+                return bool(left_var)
+            elif left_var:
+                return bool(left_var)
+            elif len(left_var)==0:
+                return bool(left_var)
+            return bool(left_var)
 
     raise InvalidProgram()
 
 
+
+def test_while():
+    a  = Variable("a")
+    n1 = NumLiteral(9)
+    b  = Variable("b")
+    n2 = NumLiteral(2)
+    bin1 = BinOp("-", a, b)
+    e  = Let(a, n1, Let(b, n2, bin1))  
+    bin2 = BinOp(">", a, b)
+    condi  = Let(a, n1, Let(b, n2, bin2))
+    # a = eval(e2)
+    # print(a)
+    condi_Block = Whilethen(condi,e)
+    print(eval(condi_Block))
+    
+
+# test_while()
