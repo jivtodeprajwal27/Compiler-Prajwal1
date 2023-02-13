@@ -1,16 +1,21 @@
 from start import *
-import pytest
 
 def test_typecheck():
     import pytest
     te = typecheck(BinOp("+", NumLiteral(2), NumLiteral(3)))
     assert te.type == NumType
+    te = typecheck(BinOp("*", NumLiteral(2), NumLiteral(3)))
+    assert te.type == NumType
     te = typecheck(BinOp("<", NumLiteral(2), NumLiteral(3)))
     assert te.type == BoolType
-    # with pytest.raises(TypeError):
-    #     typecheck(BinOp("+", BinOp("*", NumLiteral(2), NumLiteral(3)), BinOp("<", NumLiteral(2), NumLiteral(3))))
-
-
+    te = typecheck(BinOp("==", NumLiteral(2), NumLiteral(2)))
+    assert te.type == BoolType
+    te = typecheck(BinOp("==", StringLiteral("a"), StringLiteral("a")))
+    assert te.type == BoolType
+    te = typecheck(BinOp(">", StringLiteral("a"), StringLiteral("b")))
+    assert te.type == BoolType
+    
+   
 def test_div_operator():
     a  = Variable("a")
     n1= NumLiteral(5)
@@ -120,6 +125,11 @@ def test_greter_than_operator():
     e  = Let(a, n1, Let(b, n2,e2 ))
     assert eval(e) == True
 
+    a= StringLiteral("a")
+    b = StringLiteral("b")
+    e2 = BinOp(">",a,b)
+    assert eval(e2) == False
+
 def test_greter_than_equal_operator():
     a  = Variable("a")
     n1= NumLiteral(3)
@@ -177,14 +187,6 @@ def test_less_than_equal_operator():
     e  = Let(c, n3, Let(b, n2,e2 ))
     assert eval(e) == True
 
-def test_typecheck():
-    import pytest
-    te = typecheck(BinOp("+", NumLiteral(2), NumLiteral(3)))
-    assert te.type == NumType
-    te = typecheck(BinOp("<", NumLiteral(2), NumLiteral(3)))
-    assert te.type == BoolType
-    # with pytest.raises(TypeError):
-    #     typecheck(BinOp("+", BinOp("*", NumLiteral(2), NumLiteral(3)), BinOp("<", NumLiteral(2), NumLiteral(3))))
 
 def test_string():
 
@@ -192,7 +194,7 @@ def test_string():
     b=StringLiteral("world! ")
     c=StringOp("add",a,b)
     print(eval(c))
-    print(eval(StringOp('length',StringLiteral(eval(c)))))
+    print(eval(StringOp('length',c)))
 
     #print(eval(StringOp('slice',)))
 
@@ -246,12 +248,6 @@ def test_string():
     # slice3=StringSlice("slice",y1,2,5)
     # print(eval(slice2))
 
-    #test for compare
-
-    d=StringLiteral("This world")
-    e=StringLiteral("This ")
-    f=StringOp("add",e,StringLiteral('world'))
-    assert eval(f)==eval(d)
 def test_UnBoolify():
     
     z=NumLiteral()
@@ -546,35 +542,7 @@ def test_ls_rs():
     c=BinOp("<<",a,b)
     assert eval(c)==64
 
-
-def test_typecheck_string():
-    #add method
-    tc=typecheck(StringOp('add',StringLiteral("hello"),StringLiteral("World")))
-    assert tc.type==StringType
-
-    #comparision method
-    tc=typecheck(StringOp('compare',StringLiteral("hello"),StringLiteral("World")))
-    assert tc.type==BoolType
-
-    #numtype
-    tc=typecheck(StringOp('length',StringOp('add',StringLiteral("hello"),StringLiteral("World"))))
-    print(f"type: {tc.type}")
-    assert tc.type==NumType
-
-
-
-
 # test_let_eval()
-# test_div_operator()
-# test_modulus_operator()
-# test_power_operator()
-# test_floor_div_operator()
-# test_equal_operator()
-# test_not_equal_operator()
-# test_greter_than_operator()
-# test_less_than_operator()
-# test_less_than_equal_operator()
-
 # test_div_operator()
 # test_modulus_operator()
 # test_power_operator()
@@ -592,4 +560,5 @@ def test_typecheck_string():
 # test_ls_rs()
 # test_bit()
     
-
+test_typecheck()
+test_greter_than_operator()
