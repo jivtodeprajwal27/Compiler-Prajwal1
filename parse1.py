@@ -149,7 +149,15 @@ class Parser:
         self.lexer.match(Keyword("end"))
         return IfElse(c, t, f)
 
-  
+    def parse_let(self):
+        self.lexer.match(Keyword('let'))
+        c=self.parse_atom()
+        self.lexer.match(Operator("="))
+        b=self.parse_expr()
+        self.lexer.match(Keyword("in"))
+        a=self.parse_expr()
+        return Let(c,b,a)
+
 
     
     def parse_atom(self):
@@ -205,7 +213,8 @@ class Parser:
             case Keyword("if"):
                 return self.parse_if()
             
-        
+            case Keyword("let"):
+                return self.parse_let()
             case _:
                 return self.parse_simple()
 
@@ -216,8 +225,11 @@ def test_parse():
             Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
         )
     # You should parse, evaluate and see whether the expression produces the expected value in your tests.
-    print(parse("if a+b > c*d then a*b + c + d else e*f/g end"))
-    
+    # print(parse("if a+b > c×d then a×b + c + d else e×f/g end"))
+    print(parse('let a=3 in a*a end'))
+    print(eval(parse('let a=3 in a*a end')))
+    print(parse('if 3+4 >2 then 3 else 5 end'))
+    print(eval(parse('if 3+4 >8 then 3 else 5 end')))
    
 
 test_parse()
