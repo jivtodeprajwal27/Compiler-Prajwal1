@@ -43,21 +43,28 @@ class Identifier:
 class Operator:
     op: str
 
-Token = Num | Bool | Keyword | Identifier | Operator
+@dataclass
+class BitwiseOperator:
+    op: str
+
+Token = Num | Bool | Keyword | Identifier | Operator | BitwiseOperator
 
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then else end while do done let in".split()
-symbolic_operators = "+ - * / < > ≤ ≥ = ≠".split()
+keywords = "if then else end while do done let in for up".split()
+symbolic_operators = "+ - * / < > ≤ ≥ = ++ == ≠".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
+Bitwise_Operators="& | ^".split()
 
 def word_to_token(word):
     if word in keywords:
         return Keyword(word)
     if word in word_operators:
         return Operator(word)
+    if word in Bitwise_Operators:
+        return BitwiseOperator(word)
     if word == "True":
         return Bool(True)
     if word == "False":
@@ -79,6 +86,7 @@ class Lexer:
         try:
             match self.stream.next_char():
                 case c if c in symbolic_operators: return Operator(c)
+                case c if c in Bitwise_Operators: return BitwiseOperator(c)
                 case c if c.isdigit():
                     n = int(c)
                     while True:
@@ -157,7 +165,31 @@ class Parser:
         self.lexer.match(Keyword("in"))
         a=self.parse_expr()
         return Let(c,b,a)
+    
+# #     v=Variable('v')
+# # n1=NumLiteral(0)
+# # s=NumLiteral(10)
+# # condition=BinOp("<",v,s)
+# # update=UnOp('++',v)
+# # # l=ListLiteral([1,2,4,5,6])
+# # # let=Let(v,s,BinOp('+',v,v))
+# # # print(eval(let))
+# # body=PrintOp(UnOp("++",v))
 
+# # # body=PrintOp()
+
+
+# f=Let(v,n1,For(condition,update,body))
+# eval(f)
+        
+    def parse_for(self):
+        self.lexer.match(Keyword('for'))
+        c=self.parse_expr()
+        self.lexer.match(Keyword('up'))
+        u=self.parse_expr()
+        self.lexer.match(Keyword('do'))
+        b=self.parse_atom()
+        return For(c,u,b)
 
     
     def parse_atom(self):
@@ -171,6 +203,9 @@ class Parser:
             case Bool(value):
                 self.lexer.advance()
                 return BoolLiteral(value)
+            case BitwiseOperator(value):
+                self.lexer.advance()
+                return StringLiteral(value)
 
     def parse_mult(self):
         left = self.parse_atom()
@@ -198,15 +233,30 @@ class Parser:
 
     def parse_cmp(self):
         left = self.parse_add()
-        match self.lexer.peek_token():
-            case Operator(op) if op in "<>":
-                self.lexer.advance()
-                right = self.parse_add()
-                return BinOp(op, left, right)
+        while True:
+            match self.lexer.peek_token():
+                case Operator(op) if op in symbolic_operators :
+                    self.lexer.advance()
+                    m = self.parse_add()
+                    left=BinOp(op, left, m)
+                case _:
+                    break
+        return left
+    
+    def parse_bitwise(self):
+        left = self.parse_cmp()
+        while True:
+            match self.lexer.peek_token():
+                case BitwiseOperator(op) if op in "& ^ ~ |":
+                    self.lexer.advance()
+                    m = self.parse_cmp()
+                    left = BinOp(op, left, m)
+                case _:
+                    break
         return left
 
     def parse_simple(self):
-        return self.parse_cmp()
+        return self.parse_bitwise()
 
     def parse_expr(self):
         match self.lexer.peek_token():
@@ -215,6 +265,9 @@ class Parser:
             
             case Keyword("let"):
                 return self.parse_let()
+            
+            case Keyword("for"):
+                return self.parse_for()
             case _:
                 return self.parse_simple()
 
@@ -230,6 +283,8 @@ def test_parse():
     print(eval(parse('let a=3 in a*a end')))
     print(parse('if 3+4 >2 then 3 else 5 end'))
     print(eval(parse('if 3+4 >8 then 3 else 5 end')))
+    print(eval(parse('6 > 3 end')))
+    print(parse("let a=0 in for a<10 up a=1 do 0 end"))
    
 
 test_parse()
