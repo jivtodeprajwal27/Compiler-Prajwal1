@@ -43,7 +43,12 @@ class Identifier:
 class Operator:
     op: str
 
-Token = Num | Bool | Keyword | Identifier | Operator
+@dataclass
+class BitwiseOperator:
+    op: str
+
+
+Token = Num | Bool | Keyword | Identifier | Operator | BitwiseOperator
 
 class EndOfTokens(Exception):
     pass
@@ -52,11 +57,16 @@ keywords = "if then else end while do done let in".split()
 symbolic_operators = "+ - * / < > ≤ ≥ = ≠".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
+Bitwise_operators = "& | ^".split()
 
 def word_to_token(word):
     if word in keywords:
         return Keyword(word)
     if word in word_operators:
+        return Operator(word)
+    if word in Bitwise_operators:
+        return BitwiseOperator(word)
+    if word in symbolic_operators:
         return Operator(word)
     if word == "True":
         return Bool(True)
@@ -79,6 +89,7 @@ class Lexer:
         try:
             match self.stream.next_char():
                 case c if c in symbolic_operators: return Operator(c)
+                case c if c in Bitwise_operators: return BitwiseOperator(c)
                 case c if c.isdigit():
                     n = int(c)
                     while True:
@@ -158,8 +169,16 @@ class Parser:
         a=self.parse_expr()
         return Let(c,b,a)
 
-
+    def parse_while(self):
+        self.lexer.match(Keyword("while"))
+        c = self.parse_expr()
+        self.lexer.match(Keyword("do"))
+        b = self.parse_expr()
+        self.lexer.match(Keyword("done"))
+        # return While(c, b)
     
+
+
     def parse_atom(self):
         match self.lexer.peek_token():
             case Identifier(name):
@@ -171,7 +190,10 @@ class Parser:
             case Bool(value):
                 self.lexer.advance()
                 return BoolLiteral(value)
-
+            case BitwiseOperator(value):
+                self.lexer.advance()
+                return StringLiteral(value)
+                
     def parse_mult(self):
         left = self.parse_atom()
         while True:
@@ -204,15 +226,27 @@ class Parser:
                 right = self.parse_add()
                 return BinOp(op, left, right)
         return left
+    
+    def parse_bitwise(self):
+        left = self.parse_cmp()
+        while True:
+            match self.lexer.peek_token():
+                case BitwiseOperator(op) if op in "& | ^":
+                    self.lexer.advance()
+                    right = self.parse_cmp()
+                    left = BinOp(op, left, right) 
+                case _:
+                    break
+        return left
 
     def parse_simple(self):
-        return self.parse_cmp()
-
+        return self.parse_bitwise()
     def parse_expr(self):
         match self.lexer.peek_token():
             case Keyword("if"):
                 return self.parse_if()
-            
+            case Keyword("while"):
+                return self.parse_while()
             case Keyword("let"):
                 return self.parse_let()
             case _:
@@ -228,8 +262,14 @@ def test_parse():
     # print(parse("if a+b > c×d then a×b + c + d else e×f/g end"))
     print(parse('let a=3 in a*a end'))
     print(eval(parse('let a=3 in a*a end')))
-    print(parse('if 3+4 >2 then 3 else 5 end'))
+    print(parse('if 3+4 >8 then 3 else 5 end'))
     print(eval(parse('if 3+4 >8 then 3 else 5 end')))
-   
+    print(parse('6 & 3 end'))
+    print(eval(parse('6 & 3 end')))
+    print(parse('6 | 3 end'))
+    print(eval(parse('6 | 3 end')))
+    print(parse('6 ^ 3 end'))
+    print(eval(parse('6 ^ 3 end')))
+
 
 test_parse()
