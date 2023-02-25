@@ -47,17 +47,18 @@ class Operator:
 class BitwiseOperator:
     op: str
 
-
 Token = Num | Bool | Keyword | Identifier | Operator | BitwiseOperator
 
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then else end while do done let in".split()
-symbolic_operators = "+ - * / < > ≤ ≥ = ≠".split()
+keywords = "if then else end while do done let in for up".split()
+symbolic_operators = "+ - * / < > ≤ ≥ = ++ == ≠".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
-Bitwise_operators = "& | ^".split()
+
+Bitwise_Operators="& | ^".split()
+
 
 def word_to_token(word):
     if word in keywords:
@@ -68,6 +69,7 @@ def word_to_token(word):
         return BitwiseOperator(word)
     if word in symbolic_operators:
         return Operator(word)
+
     if word == "True":
         return Bool(True)
     if word == "False":
@@ -89,7 +91,8 @@ class Lexer:
         try:
             match self.stream.next_char():
                 case c if c in symbolic_operators: return Operator(c)
-                case c if c in Bitwise_operators: return BitwiseOperator(c)
+                case c if c in Bitwise_Operators: return BitwiseOperator(c)
+
                 case c if c.isdigit():
                     n = int(c)
                     while True:
@@ -169,6 +172,18 @@ class Parser:
         a=self.parse_expr()
         return Let(c,b,a)
 
+        
+    def parse_for(self):
+        self.lexer.match(Keyword('for'))
+        c=self.parse_expr()
+        self.lexer.match(Keyword('up'))
+        u=self.parse_expr()
+        self.lexer.match(Keyword('do'))
+        b=self.parse_atom()
+        return For(c,u,b)
+
+
+
     def parse_while(self):
         self.lexer.match(Keyword("while"))
         c = self.parse_expr()
@@ -176,6 +191,7 @@ class Parser:
         b = self.parse_expr()
         self.lexer.match(Keyword("done"))
         # return While(c, b)
+
     
 
 
@@ -193,7 +209,7 @@ class Parser:
             case BitwiseOperator(value):
                 self.lexer.advance()
                 return StringLiteral(value)
-                
+
     def parse_mult(self):
         left = self.parse_atom()
         while True:
@@ -220,11 +236,26 @@ class Parser:
 
     def parse_cmp(self):
         left = self.parse_add()
-        match self.lexer.peek_token():
-            case Operator(op) if op in "<>":
-                self.lexer.advance()
-                right = self.parse_add()
-                return BinOp(op, left, right)
+        while True:
+            match self.lexer.peek_token():
+                case Operator(op) if op in symbolic_operators :
+                    self.lexer.advance()
+                    m = self.parse_add()
+                    left=BinOp(op, left, m)
+                case _:
+                    break
+        return left
+    
+    def parse_bitwise(self):
+        left = self.parse_cmp()
+        while True:
+            match self.lexer.peek_token():
+                case BitwiseOperator(op) if op in "& ^ ~ |":
+                    self.lexer.advance()
+                    m = self.parse_cmp()
+                    left = BinOp(op, left, m)
+                case _:
+                    break
         return left
     
     def parse_bitwise(self):
@@ -241,6 +272,7 @@ class Parser:
 
     def parse_simple(self):
         return self.parse_bitwise()
+
     def parse_expr(self):
         match self.lexer.peek_token():
             case Keyword("if"):
@@ -249,6 +281,9 @@ class Parser:
                 return self.parse_while()
             case Keyword("let"):
                 return self.parse_let()
+            
+            case Keyword("for"):
+                return self.parse_for()
             case _:
                 return self.parse_simple()
 
@@ -264,12 +299,10 @@ def test_parse():
     print(eval(parse('let a=3 in a*a end')))
     print(parse('if 3+4 >8 then 3 else 5 end'))
     print(eval(parse('if 3+4 >8 then 3 else 5 end')))
-    print(parse('6 & 3 end'))
-    print(eval(parse('6 & 3 end')))
-    print(parse('6 | 3 end'))
-    print(eval(parse('6 | 3 end')))
-    print(parse('6 ^ 3 end'))
-    print(eval(parse('6 ^ 3 end')))
+
+    print(eval(parse('6 > 3 end')))
+    print(parse("let a=0 in for a<10 up a=1 do 0 end"))
+   
 
 
 test_parse()
