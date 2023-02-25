@@ -363,6 +363,9 @@ def test_list():
     print(eval(e8))
     #assert eval(e7)==[1, 3, 5, 7, 9, [11, 13]]
 
+    e9=ListLiteral([2,3,90])
+    op=ListOp('get',e9,NumLiteral(0))
+    assert eval(op)==2
 
 def test_unop():
     
@@ -561,7 +564,27 @@ def test_typecheck_string():
     print(f"type: {tc.type}")
     assert tc.type==NumType
 
+def test_for_iteration():
+    v=Variable('v')
+    n1=NumLiteral(0)
+    s=NumLiteral(5)
+    condition=BinOp("<",v,s)
+    update=UnOp('++',v)
+    # l=ListLiteral([1,2,4,5,6])
+    # let=Let(v,s,BinOp('+',v,v))
+    # print(eval(let))
+    body=PrintOp(UnOp("++",v))
 
+    # body=PrintOp()
+
+    array=ListLiteral([20,43,54,23340,3291])
+    body_array=PrintOp(ListOp("get",array,v))
+    f=Let(v,n1,For(condition,update,body_array))
+    eval(f)
+
+
+
+test_for_iteration()
 
 
 # test_let_eval()
