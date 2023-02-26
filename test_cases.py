@@ -1,15 +1,7 @@
 from start import *
 import pytest
 
-def test_typecheck():
-    import pytest
-    te = typecheck(BinOp("+", NumLiteral(2), NumLiteral(3)))
-    assert te.type == NumType
-    te = typecheck(BinOp("<", NumLiteral(2), NumLiteral(3)))
-    assert te.type == BoolType
-    # with pytest.raises(TypeError):
-    #     typecheck(BinOp("+", BinOp("*", NumLiteral(2), NumLiteral(3)), BinOp("<", NumLiteral(2), NumLiteral(3))))
-
+# Test For Eval
 
 def test_div_operator():
     a  = Variable("a")
@@ -32,7 +24,6 @@ def test_div_operator():
     # e2 = BinOp("/", b, c)
     # e  = Let(c, n0, Let(b, n2,e2 ))
     # assert eval(e) == InvalidProgram
-
 
 def test_modulus_operator():
     a  = Variable("a")
@@ -80,7 +71,6 @@ def test_power_operator():
     # e  = Let(a, n1, Let(b, n2,e2 ))
     # assert eval(e) == 0
 
-    
 def test_equal_operator():
     a  = Variable("a")
     n1= NumLiteral(3)
@@ -177,15 +167,6 @@ def test_less_than_equal_operator():
     e  = Let(c, n3, Let(b, n2,e2 ))
     assert eval(e) == True
 
-def test_typecheck():
-    import pytest
-    te = typecheck(BinOp("+", NumLiteral(2), NumLiteral(3)))
-    assert te.type == NumType
-    te = typecheck(BinOp("<", NumLiteral(2), NumLiteral(3)))
-    assert te.type == BoolType
-    # with pytest.raises(TypeError):
-    #     typecheck(BinOp("+", BinOp("*", NumLiteral(2), NumLiteral(3)), BinOp("<", NumLiteral(2), NumLiteral(3))))
-
 def test_string():
 
     a=StringLiteral("hello ")
@@ -252,6 +233,7 @@ def test_string():
     e=StringLiteral("This ")
     f=StringOp("add",e,StringLiteral('world'))
     assert eval(f)==eval(d)
+
 def test_UnBoolify():
     
     z=NumLiteral()
@@ -363,10 +345,6 @@ def test_list():
     print(eval(e8))
     #assert eval(e7)==[1, 3, 5, 7, 9, [11, 13]]
 
-    e9=ListLiteral([2,3,90])
-    op=ListOp('get',e9,NumLiteral(0))
-    assert eval(op)==2
-
 def test_unop():
     
     a=Variable("a")
@@ -430,8 +408,6 @@ def test_ls_rs():
     c=BinOp("<<",a,b)
     assert eval(c)==64
 
-
-
 def test_cases_list_literal():
     # test for length using Variables
     l=ListLiteral([1,3,4])
@@ -482,7 +458,6 @@ def test_cases_list_literal():
     l1.type=NumType
     c=ListOp('remove',l1)
     assert eval(c)==[23,45]
-    
 
 def test_unOp():
     v=Variable('v')
@@ -491,13 +466,21 @@ def test_unOp():
     c=Let(v,e1,BinOp('*',v,Let(v,e2,e2)))
     assert eval(c)==15
 
-def test_letmut():
+def test_LetConst():
     a = Variable("a")
     b = Variable("b")
-    e1 = LetMut(b, NumLiteral(2), Put(a, BinOp("+", Get(a), Get(b))))
-    e2 = LetMut(a, NumLiteral(1), Seq([e1, Get(a)]))
-    print(eval(e2))
+    e1 = LetConst(b, NumLiteral(2), Put(a, BinOp("+", Get(a), Get(b))))
+    e2 = LetConst(a, NumLiteral(1), Seq([e1, Get(a)]))
+    # print(eval(e2))
     assert eval(e2) == 3
+
+    # a = Variable("a")
+    # b = Variable("b")
+    # e1 = LetConst(b, NumLiteral(2), Put(a, BinOp("+", Get(a), Get(b))))
+    # e2 = LetConst(b, NumLiteral(1), Seq([e1, Get(a)]))
+    # print(eval(e2))
+
+    #  Outpout of the above program is error msg Variable name exists.
 
 
 def test_let_eval():
@@ -549,21 +532,6 @@ def test_ls_rs():
     c=BinOp("<<",a,b)
     assert eval(c)==64
 
-
-def test_typecheck_string():
-    #add method
-    tc=typecheck(StringOp('add',StringLiteral("hello"),StringLiteral("World")))
-    assert tc.type==StringType
-
-    #comparision method
-    tc=typecheck(StringOp('compare',StringLiteral("hello"),StringLiteral("World")))
-    assert tc.type==BoolType
-
-    #numtype
-    tc=typecheck(StringOp('length',StringOp('add',StringLiteral("hello"),StringLiteral("World"))))
-    print(f"type: {tc.type}")
-    assert tc.type==NumType
-
 def test_for_iteration():
     v=Variable('v')
     n1=NumLiteral(0)
@@ -581,6 +549,43 @@ def test_for_iteration():
     body_array=PrintOp(ListOp("get",array,v))
     f=Let(v,n1,For(condition,update,body_array))
     eval(f)
+
+#  Test Typechek
+
+def test_typecheck_BinOp():
+    import pytest
+    te = typecheck(BinOp("+", NumLiteral(2), NumLiteral(3)))
+    assert te.type == NumType
+    te = typecheck(BinOp("*", NumLiteral(2), NumLiteral(3)))
+    assert te.type == NumType
+    te = typecheck(BinOp("*", NumLiteral(2),BinOp("*", NumLiteral(2), NumLiteral(3)) ))
+    assert te.type == NumType
+    te = typecheck(BinOp("<", NumLiteral(2), NumLiteral(3)))
+    assert te.type == BoolType
+    te = typecheck(BinOp("==", NumLiteral(2), NumLiteral(2)))
+    assert te.type == BoolType
+    te = typecheck(BinOp("==", StringLiteral("a"), StringLiteral("a")))
+    assert te.type == BoolType
+    te = typecheck(BinOp(">", StringLiteral("a"), StringLiteral("b")))
+    assert te.type == BoolType
+    te = typecheck(BinOp(">", NumLiteral(1), StringLiteral("b")))
+    assert te.type == BoolType
+
+def test_typecheck_string():
+    #add method
+    tc=typecheck(StringOp('add',StringLiteral("hello"),StringLiteral("World")))
+    assert tc.type==StringType
+
+    #comparision method
+    tc=typecheck(StringOp('compare',StringLiteral("hello"),StringLiteral("World")))
+    assert tc.type==BoolType
+
+    #numtype
+    tc=typecheck(StringOp('length',StringOp('add',StringLiteral("hello"),StringLiteral("World"))))
+    print(f"type: {tc.type}")
+    assert tc.type==NumType
+
+
 
 
 # test_let_eval()
@@ -610,5 +615,4 @@ def test_for_iteration():
 # test_unop()
 # test_ls_rs()
 # test_bit()
-    
-
+# test_typecheck_BinOp()

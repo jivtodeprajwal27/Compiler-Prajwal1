@@ -23,12 +23,15 @@ class ListType:
 class IntType:
     pass
 
+class VarType:
+    pass
+
 @dataclass 
 class FracType:
     pass
 
 
-SimType = NumType | BoolType | StringType | ListType | IntType | FracType
+SimType = NumType | BoolType | StringType | ListType | IntType | FracType | VarType
 
 @dataclass
 class NumLiteral:
@@ -72,6 +75,7 @@ class BinOp:
 @dataclass
 class Variable:
     name: str
+    type : SimType = VarType
 
 @dataclass
 class UnOp:
@@ -131,7 +135,7 @@ class Put:
     e1: 'AST'
 
 @dataclass
-class LetMut:
+class LetConst:
     var: 'AST'
     e1: 'AST'
     e2: 'AST'
@@ -186,8 +190,13 @@ class Environment:
                 env[name] = value
                 return
         raise KeyError()
+    def check(self, name):
+        for env in reversed(self.envs):
+            if name in env:
+                return env[name]
+        return None
 
-AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|IntLiteral|FracLiteral|ListOp| Get | Put |Let | LetMut |Seq | Whilethen |For
+AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|IntLiteral|FracLiteral|ListOp| Get | Put |Let | LetConst |Seq | Whilethen |For | Variable
 
 Value = Fraction
 
@@ -195,7 +204,8 @@ TypedAST = NewType('TypedAST', AST)
 
 class TypeError(Exception):
     pass
-
+Binary_operators  = "+ - * / % ** // ".split()
+Binary_operators_comparision = "== != < > <= >=".split()
 # Since we don't have variables, environment is not needed.
 def typecheck(program: AST, env = None) -> TypedAST:
     match program:
@@ -209,42 +219,40 @@ def typecheck(program: AST, env = None) -> TypedAST:
             return t
         case FracLiteral() as t:
             return t
-        case BinOp(op, left, right) if op in ["+", "*"]:
+        case Variable() as V:
+            return V
+        case BinOp(op, left, right) if op in   Binary_operators or Binary_operators_comparision:
             tleft = typecheck(left)
             tright = typecheck(right)
+            print(tleft, tright)
+            Binop_list_Comp = [NumType, StringType, VarType]
+            Binop_list__op = [NumType, VarType]
+            if op in Binary_operators:
+                if tleft.type in Binop_list__op and tright.type in Binop_list__op:
+                    # print(f"left: {tleft}.type")
+                    # print(f"right: {tright}.type")
+                    return BinOp(op, left, right, NumType)
+                raise TypeError()
+                
+            else:
+                if(tleft.type in  Binop_list_Comp  and tright.type in Binop_list_Comp ):
+                    return BinOp(op, left, right, BoolType)
+                # if(tleft.type == StringType and tright.type == StringType):
+                #     return BinOp(op,left,right,BoolType)
+                # if(tleft.type == VarType and tright.type == VarType):
+                #     return BinOp(op,left,right,BoolType)
+                raise TypeError()
+        case Let(var, num_val, expr):
+            t_var = typecheck(var)
+            t_num_val = typecheck(num_val)
+            t_expr = typecheck(expr)
+            print(t_num_val)
             
-            if tleft.type != NumType or tright.type != NumType:
-                print(f"left: {tleft}.type")
-                print(f"right: {tright}.type")
+            type_num_val = [NumType , StringType]
+            if(t_num_val.type not in type_num_val ):
                 raise TypeError()
-            return BinOp(op, left, right, NumType)
-        
-        case BinOp(op, left, right) if op in ["/"]:
-            tleft = typecheck(left)
-            tright = typecheck(right)
             
-            if tleft.type != IntType or tright.type != IntType:
-                print(f"left: {tleft}.type")
-                print(f"right: {tright}.type")
-                raise TypeError()
-            elif tleft.type != FracType or tright.type != FracType:
-                print(f"left: {tleft}.type")
-                print(f"right: {tright}.type")
-                raise TypeError()
-            return BinOp(op, left, right, tleft.type)
-
-        case BinOp("<", left, right):
-            tleft = typecheck(left)
-            tright = typecheck(right)
-            if tleft.type != NumType or tright.type != NumType:
-                raise TypeError()
-            return BinOp("<", left, right, BoolType)
-        case BinOp("=", left, right):
-            tleft = typecheck(left)
-            tright = typecheck(right)
-            if tleft.type != tright.type:
-                raise TypeError()
-            return BinOp("=", left, right, BoolType)
+            return Let(t_var, t_num_val,t_expr)
         
         case UnOp('-',vari):
             tvari=typecheck(vari)
@@ -351,8 +359,11 @@ def eval(program: AST, environment: Environment = None) -> Value:
             environment.exit_scope()
             return v2
          
-        case LetMut(Variable(name),e1,e2):
+        case LetConst(Variable(name),e1,e2):
             v1 = eval2(e1)
+            if(environment.check(name) != None):
+                print("Variable name exists")
+                raise InvalidProgram()
             environment.enter_scope()
             environment.add(name,v1)
             v2 = eval2(e2)
@@ -583,5 +594,3 @@ def eval(program: AST, environment: Environment = None) -> Value:
                     break
             return
     raise InvalidProgram()
-
-
