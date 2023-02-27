@@ -56,7 +56,6 @@ keywords = "if then else end while do done let in for up".split()
 symbolic_operators = "+ - * / < > ≤ ≥ = ++ == ≠".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
-Bitwise_operators = "& | ^".split()
 
 Bitwise_Operators="& | ^".split()
 
@@ -70,12 +69,12 @@ def word_to_token(word):
         return BitwiseOperator(word)
     if word in symbolic_operators:
         return Operator(word)
+
     if word == "True":
         return Bool(True)
     if word == "False":
         return Bool(False)
     return Identifier(word)
-    
 
 class TokenError(Exception):
     pass
@@ -91,22 +90,8 @@ class Lexer:
     def next_token(self) -> Token:
         try:
             match self.stream.next_char():
-
-                case c if c in Bitwise_operators: return BitwiseOperator(c)
-                case c if c in symbolic_operators:
-                    try:
-                        c2=self.stream.next_char()
-                        if c2=='<' and c2=='<':
-                            s=c+c2
-                            return Operator(s)
-                        elif c=='>' and c2=='>':
-                            s=c+c2
-                            return Operator(s)
-                        else:
-                            self.stream.unget()
-                            return Operator(c)
-                    except EndOfStream:
-                        return Operator(c)
+                case c if c in symbolic_operators: return Operator(c)
+                case c if c in Bitwise_Operators: return BitwiseOperator(c)
 
                 case c if c.isdigit():
                     n = int(c)
@@ -187,7 +172,6 @@ class Parser:
         a=self.parse_expr()
         return Let(c,b,a)
 
-
         
     def parse_for(self):
         self.lexer.match(Keyword('for'))
@@ -208,12 +192,11 @@ class Parser:
         self.lexer.match(Keyword("done"))
         # return While(c, b)
 
+    
+
 
     def parse_atom(self):
         match self.lexer.peek_token():
-            case Operator(value):
-                self.lexer.advance()
-                return Operator(value)
             case Identifier(name):
                 self.lexer.advance()
                 return Variable(name)
@@ -226,6 +209,7 @@ class Parser:
             case BitwiseOperator(value):
                 self.lexer.advance()
                 return StringLiteral(value)
+
     def parse_mult(self):
         left = self.parse_atom()
         while True:
@@ -249,19 +233,6 @@ class Parser:
                 case _:
                     break
         return left
-    
-    def parse_shift(self):
-        left = self.parse_add()
-        while True:
-            match self.lexer.peek_token():
-                case Operator(op) if op in "<<>>":
-                    self.lexer.advance()
-                    right =self.parse_add()
-                    left=BinOp(op,left,right)
-                case _:
-                    break
-        return left
-    
 
     def parse_cmp(self):
         left = self.parse_add()
@@ -274,7 +245,18 @@ class Parser:
                 case _:
                     break
         return left
-
+    
+    def parse_bitwise(self):
+        left = self.parse_cmp()
+        while True:
+            match self.lexer.peek_token():
+                case BitwiseOperator(op) if op in "& ^ ~ |":
+                    self.lexer.advance()
+                    m = self.parse_cmp()
+                    left = BinOp(op, left, m)
+                case _:
+                    break
+        return left
     
     def parse_bitwise(self):
         left = self.parse_cmp()
@@ -287,7 +269,6 @@ class Parser:
                 case _:
                     break
         return left
-
 
     def parse_simple(self):
         return self.parse_bitwise()
@@ -314,24 +295,13 @@ def test_parse():
         )
     # You should parse, evaluate and see whether the expression produces the expected value in your tests.
     # print(parse("if a+b > c×d then a×b + c + d else e×f/g end"))
+    print(parse('let a=3 in a*a end'))
+    print(eval(parse('let a=3 in a*a end')))
+    print(parse('if 3+4 >8 then 3 else 5 end'))
+    print(eval(parse('if 3+4 >8 then 3 else 5 end')))
 
-    # print(parse('let a=3 in a*a end'))
-    # print(eval(parse('let a=3 in a*a end')))
-    # print(parse('if 3+4 >8 then 3 else 5 end'))
-    # print(eval(parse('if 3+4 >8 then 3 else 5 end')))
-    print(parse('6 & 3 end'))
-    print(eval(parse('6 & 3 end')))
-    print(parse('6 | 3 end'))
-    print(eval(parse('6 | 3 end')))
-    print(parse('6 ^ 3 end'))
-    print(eval(parse('6 ^ 3 end')))
-    print(parse(' 6 << 3 end'))
-    print(eval(parse(' 6 << 3 end')))
-    print(parse(' 6 >> 3 end'))
-    print(eval(parse(' 6 >> 3 end')))
-
-
-   
+    print(eval(parse('6 > 3 end')))
+    print(parse("let a=0 in for a<10 up a=1 do 0 end"))
    
 
 
