@@ -222,9 +222,9 @@ class Parser:
             case Bool(value):
                 self.lexer.advance()
                 return BoolLiteral(value)
-            case BitwiseOperator(value):
-                self.lexer.advance()
-                return StringLiteral(value)
+            # case BitwiseOperator(value):
+            #     self.lexer.advance()
+            #     return StringLiteral(value)
 
     
 
