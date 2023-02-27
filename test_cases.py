@@ -549,7 +549,7 @@ def test_for_iteration():
     body_array=PrintOp(ListOp("get",array,v))
     f=Let(v,n1,For(condition,update,body_array))
     eval(f)
-
+test_for_iteration()
 
 # test_let_eval()
 # test_div_operator()

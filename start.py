@@ -315,7 +315,7 @@ def typecheck(program: AST, env = None) -> TypedAST:
             if tleft.type!=StringType:
                 raise TypeError()
             return StringOp("length",left,type=NumType)
-
+        
         case Un_boolify(left):
             tleft=typecheck(left)
             if tleft.type!=NumType or StringType:
@@ -578,7 +578,14 @@ def eval(program: AST, environment: Environment = None) -> Value:
             arr= eval2(array)
             arr.remove(index)
             return arr
-        
+        case ListOp('get',array,index):
+            # i_type=typecheck(index)
+
+            # if(i_type.type!=NumType):raise InvalidProgram()
+
+            if(int(eval2(index))>=len(eval2(array))): raise InvalidProgram()
+
+            return eval2(array)[int(eval2(index))]
         case Un_boolify(left):
             left_var=eval(left,environment)
             if left_var==0:
@@ -590,6 +597,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return bool(left_var)
         
         case For(condition,update,body):
+            # environment.enter_scope()
             eval_cond=eval2(condition)
             while(eval_cond):
                 eval2(body)
@@ -597,10 +605,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 cond=eval2(condition)
                 if(cond==False):
                     break
+            # environment.exit_scope()
             return
-
-        
-                 
-
     raise InvalidProgram()
 
