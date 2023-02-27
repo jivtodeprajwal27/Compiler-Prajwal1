@@ -1,5 +1,5 @@
 from start import *
-
+import ast
 class EndOfStream(Exception):
     pass
 
@@ -43,18 +43,18 @@ class Identifier:
 class Operator:
     op: str
 
-@dataclass
-class BitwiseOperator:
-    op: str
-
-Token = Num | Bool | Keyword | Identifier | Operator | BitwiseOperator
+Token = Num | Bool | Keyword | Identifier | Operator
 
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then else end while do done let in for up".split()
-symbolic_operators = "+ - * / < > ≤ ≥ = ++ == ≠".split()
+keywords = "if then else end while do done let in".split()
+symbolic_operators = "+ - * / < > ≤ ≥ = ≠".split()
 word_operators = "and or not quot rem".split()
+starting_braces='[ ('.split()
+ending_braces='] )'.split()
+quotes='"'
+
 whitespace = " \t\n"
 
 Bitwise_Operators="& | ^".split()
@@ -74,6 +74,14 @@ def word_to_token(word):
         return Bool(True)
     if word == "False":
         return Bool(False)
+    if word.startswith('[') and word.endswith(']'):
+        return List(ast.literal_eval(word))
+    if word.startswith('"') and word.endswith('"'):
+        return String(word)
+    if word.startswith('len(') and word.endswith(')'):
+        
+        return Method('len',Identifier(word[4:-1]))
+    
     return Identifier(word)
 
 class TokenError(Exception):
@@ -105,12 +113,13 @@ class Lexer:
                                 return Num(n)
                         except EndOfStream:
                             return Num(n)
+                
                 case c if c.isalpha():
                     s = c
                     while True:
                         try:
                             c = self.stream.next_char()
-                            if c.isalpha():
+                            if c.isalpha() or c in starting_braces or c in ending_braces:
                                 s = s + c
                             else:
                                 self.stream.unget()
@@ -119,6 +128,34 @@ class Lexer:
                             return word_to_token(s)
                 case c if c in whitespace:
                     return self.next_token()
+                case c if c in starting_braces:
+                    s=c
+                    while True:
+                        try:
+                            c=self.stream.next_char()
+                            s=s+c
+                            if c in ending_braces:
+                                return word_to_token(s)
+
+                        except EndOfStream:
+                            return word_to_token(s)
+
+                case c if c in quotes:
+                    s=c
+                    while True:
+                        try:
+                            c=self.stream.next_char()
+                            s+=c
+                            if c in quotes:
+                                return word_to_token(s)
+                            
+                        except EndOfStream:
+                            return word_to_token(s)
+                
+                
+                
+
+
         except EndOfStream:
             raise EndOfTokens
 
@@ -172,29 +209,8 @@ class Parser:
         a=self.parse_expr()
         return Let(c,b,a)
 
-        
-    def parse_for(self):
-        self.lexer.match(Keyword('for'))
-        c=self.parse_expr()
-        self.lexer.match(Keyword('up'))
-        u=self.parse_expr()
-        self.lexer.match(Keyword('do'))
-        b=self.parse_atom()
-        return For(c,u,b)
-
-
-
-    def parse_while(self):
-        self.lexer.match(Keyword("while"))
-        c = self.parse_expr()
-        self.lexer.match(Keyword("do"))
-        b = self.parse_expr()
-        self.lexer.match(Keyword("done"))
-        # return While(c, b)
 
     
-
-
     def parse_atom(self):
         match self.lexer.peek_token():
             case Identifier(name):
@@ -209,6 +225,8 @@ class Parser:
             case BitwiseOperator(value):
                 self.lexer.advance()
                 return StringLiteral(value)
+
+    
 
     def parse_mult(self):
         left = self.parse_atom()
@@ -277,13 +295,9 @@ class Parser:
         match self.lexer.peek_token():
             case Keyword("if"):
                 return self.parse_if()
-            case Keyword("while"):
-                return self.parse_while()
+            
             case Keyword("let"):
                 return self.parse_let()
-            
-            case Keyword("for"):
-                return self.parse_for()
             case _:
                 return self.parse_simple()
 
@@ -297,12 +311,8 @@ def test_parse():
     # print(parse("if a+b > c×d then a×b + c + d else e×f/g end"))
     print(parse('let a=3 in a*a end'))
     print(eval(parse('let a=3 in a*a end')))
-    print(parse('if 3+4 >8 then 3 else 5 end'))
+    print(parse('if 3+4 >2 then 3 else 5 end'))
     print(eval(parse('if 3+4 >8 then 3 else 5 end')))
-
-    print(eval(parse('6 > 3 end')))
-    print(parse("let a=0 in for a<10 up a=1 do 0 end"))
    
-
 
 test_parse()

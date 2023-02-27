@@ -105,7 +105,10 @@ class Let:
     var: 'AST'
     e1: 'AST'
     e2: 'AST'
-
+class LetGlobal:
+    var:'AST'
+    e1:'AST'
+    e2:Optional['AST']
 @dataclass
 class IfElse:
     condition: 'AST'
@@ -160,6 +163,8 @@ class For:
     condition:'AST'
     update:'AST'
     body:'AST'
+
+@dataclass
 
 class Environment:
     envs: List
@@ -384,7 +389,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case BinOp("-", left, right):
             return eval2(left) - eval2(right)
         case BinOp("*", left, right):
-            return eval2(left,) * eval2(right )
+            return eval2(left) * eval2(right )
         case BinOp("/", left, right):
             if(right==0):
                 raise InvalidProgram()
@@ -593,4 +598,9 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 if(cond==False):
                     break
             return
+
+        
+                 
+
     raise InvalidProgram()
+
