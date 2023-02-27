@@ -43,25 +43,12 @@ class Identifier:
 class Operator:
     op: str
 
-@dataclass
-class List:
-    b:ListLiteral
-@dataclass
-class String:
-    s:str
-
-@dataclass
-class Method:
-    method_name:str
-    identifier:Identifier
-
-Token = Num | Bool | Keyword | Identifier | Operator | List| String| Method
-
+Token = Num | Bool | Keyword | Identifier | Operator
 
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then else end while do done let in list String len".split()
+keywords = "if then else end while do done let in".split()
 symbolic_operators = "+ - * / < > ≤ ≥ = ≠".split()
 word_operators = "and or not quot rem".split()
 starting_braces='[ ('.split()
@@ -70,11 +57,19 @@ quotes='"'
 
 whitespace = " \t\n"
 
+Bitwise_Operators="& | ^".split()
+
+
 def word_to_token(word):
     if word in keywords:
         return Keyword(word)
     if word in word_operators:
         return Operator(word)
+    if word in Bitwise_operators:
+        return BitwiseOperator(word)
+    if word in symbolic_operators:
+        return Operator(word)
+
     if word == "True":
         return Bool(True)
     if word == "False":
@@ -104,6 +99,8 @@ class Lexer:
         try:
             match self.stream.next_char():
                 case c if c in symbolic_operators: return Operator(c)
+                case c if c in Bitwise_Operators: return BitwiseOperator(c)
+
                 case c if c.isdigit():
                     n = int(c)
                     while True:
@@ -212,25 +209,8 @@ class Parser:
         a=self.parse_expr()
         return Let(c,b,a)
 
-    def parse_list(self):
-        self.lexer.match(Keyword('list'))
-        match self.lexer.peek_token():
-            case List(name):
-                self.lexer.advance()
-                return ListLiteral(name)
-    def parse_string(self):
-        self.lexer.match(Keyword('String'))
-        match self.lexer.peek_token():
-            case String(name):
-                self.lexer.advance()
-                return StringLiteral(name)
 
-    def parse_len(self,m):
-        
-        self.lexer.match(Method('len',Identifier(m.identifier.word)))
-        
-        return ListOp('length',Variable(m.identifier.word))
-
+    
     def parse_atom(self):
         match self.lexer.peek_token():
             case Identifier(name):
@@ -242,6 +222,9 @@ class Parser:
             case Bool(value):
                 self.lexer.advance()
                 return BoolLiteral(value)
+            case BitwiseOperator(value):
+                self.lexer.advance()
+                return StringLiteral(value)
 
     
 
@@ -271,28 +254,50 @@ class Parser:
 
     def parse_cmp(self):
         left = self.parse_add()
-        match self.lexer.peek_token():
-            case Operator(op) if op in "<>":
-                self.lexer.advance()
-                right = self.parse_add()
-                return BinOp(op, left, right)
+        while True:
+            match self.lexer.peek_token():
+                case Operator(op) if op in symbolic_operators :
+                    self.lexer.advance()
+                    m = self.parse_add()
+                    left=BinOp(op, left, m)
+                case _:
+                    break
+        return left
+    
+    def parse_bitwise(self):
+        left = self.parse_cmp()
+        while True:
+            match self.lexer.peek_token():
+                case BitwiseOperator(op) if op in "& ^ ~ |":
+                    self.lexer.advance()
+                    m = self.parse_cmp()
+                    left = BinOp(op, left, m)
+                case _:
+                    break
+        return left
+    
+    def parse_bitwise(self):
+        left = self.parse_cmp()
+        while True:
+            match self.lexer.peek_token():
+                case BitwiseOperator(op) if op in "& | ^":
+                    self.lexer.advance()
+                    right = self.parse_cmp()
+                    left = BinOp(op, left, right) 
+                case _:
+                    break
         return left
 
     def parse_simple(self):
-        return self.parse_cmp()
+        return self.parse_bitwise()
 
     def parse_expr(self):
         match self.lexer.peek_token():
-            case Keyword("let"):
-                return self.parse_let()
             case Keyword("if"):
                 return self.parse_if()
-            case Keyword("list"):
-                return self.parse_list()
-            case Keyword("String"):
-                return self.parse_string()
-            case Method("len",Identifier(name)):
-                return self.parse_len(Method("len",Identifier(name)))
+            
+            case Keyword("let"):
+                return self.parse_let()
             case _:
                 return self.parse_simple()
 
@@ -303,16 +308,11 @@ def test_parse():
             Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
         )
     # You should parse, evaluate and see whether the expression produces the expected value in your tests.
-    # print(parse("if a+b > c*d then a*b + c + d else e*f/g end"))
-    # print(parse('let a=3 in a*a end'))
-    # print(parse('let a=list [1,2,3]  in a end')) #working fine
-    print(eval(parse('let a=list [1,2,3,4,5]  in len(a) end')))
-    # print(parse('String "this is a string"'))
-    print(eval(parse('let abc= String "have a nice day sir" in len(abc) end')))
-    # print(parse('list [1,2,3] end'))
-    # print(eval(parse('let a=3 in a*a end')))
-    # print(parse('if 3+4 >2 then 3 else 5 end'))
-    # print(eval(parse('if 3+4 > 8 then 3 else 5 end')))
+    # print(parse("if a+b > c×d then a×b + c + d else e×f/g end"))
+    print(parse('let a=3 in a*a end'))
+    print(eval(parse('let a=3 in a*a end')))
+    print(parse('if 3+4 >2 then 3 else 5 end'))
+    print(eval(parse('if 3+4 >8 then 3 else 5 end')))
    
 
 test_parse()
