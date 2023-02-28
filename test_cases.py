@@ -550,6 +550,7 @@ def test_for_iteration():
     f=Let(v,n1,For(condition,update,body_array))
     eval(f)
 test_for_iteration()
+x=Variable('x')
 
 # test_let_eval()
 # test_div_operator()
