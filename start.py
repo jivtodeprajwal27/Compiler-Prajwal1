@@ -597,7 +597,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return bool(left_var)
         
         case For(condition,update,body):
-            # environment.enter_scope()
+            environment.enter_scope()
             eval_cond=eval2(condition)
             while(eval_cond):
                 eval2(body)
@@ -605,7 +605,8 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 cond=eval2(condition)
                 if(cond==False):
                     break
-            # environment.exit_scope()
+            environment.exit_scope()
             return
+        
     raise InvalidProgram()
 
