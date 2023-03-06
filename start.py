@@ -2,6 +2,12 @@ from fractions import Fraction
 from dataclasses import dataclass,field
 from typing import Optional, NewType, Mapping, List
 
+currentID = 0
+
+def fresh():
+    global currentID
+    currentID = currentID + 1
+    return currentID
 
 @dataclass
 class NumType:
@@ -72,10 +78,16 @@ class BinOp:
     right: 'AST'
     type: Optional[SimType] = None
 
-@dataclass
+@dataclass(frozen=True)
 class Variable:
     name: str
     type : SimType = VarType
+    # id:int
+
+    # def make(name):
+    #     print(fresh())
+    #     return Variable(name,VarType, fresh())
+    
 
 @dataclass
 class UnOp:
@@ -105,6 +117,7 @@ class Let:
     var: 'AST'
     e1: 'AST'
     e2: 'AST'
+    type:SimType=None
 class LetGlobal:
     var:'AST'
     e1:'AST'
@@ -119,6 +132,7 @@ class IfElse:
 @dataclass
 class ListLiteral:
     list_val:list
+    type:SimType=ListType
 
 @dataclass
 class ListOp:
@@ -163,6 +177,18 @@ class For:
     condition:'AST'
     update:'AST'
     body:'AST'
+@dataclass
+class LetFun:
+    name: 'AST'
+    params: List['AST']
+    body: 'AST'
+    expr: 'AST'
+
+@dataclass
+class FunCall:
+    fn: 'AST'
+    args: List['AST']
+
 
 @dataclass
 
@@ -201,9 +227,15 @@ class Environment:
                 return env[name]
         return None
 
-AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|IntLiteral|FracLiteral|ListOp| Get | Put |Let | LetConst |Seq | Whilethen |For | Variable
+AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|IntLiteral|FracLiteral|ListOp| Get | Put |Let | LetConst |Seq | Whilethen |For | Variable|LetFun | FunCall
 
-Value = Fraction
+
+@dataclass
+class FnObject:
+    params: List['AST']
+    body: 'AST'
+
+Value = Fraction|FnObject
 
 TypedAST = NewType('TypedAST', AST)
 
@@ -223,6 +255,8 @@ def typecheck(program: AST, env = None) -> TypedAST:
         case IntLiteral() as t:
             return t
         case FracLiteral() as t:
+            return t
+        case ListLiteral() as t:
             return t
         case Variable() as V:
             return V
@@ -251,13 +285,12 @@ def typecheck(program: AST, env = None) -> TypedAST:
             t_var = typecheck(var)
             t_num_val = typecheck(num_val)
             t_expr = typecheck(expr)
-            print(t_num_val)
             
             type_num_val = [NumType , StringType]
             if(t_num_val.type not in type_num_val ):
                 raise TypeError()
             
-            return Let(t_var, t_num_val,t_expr)
+            return Let(t_var, t_num_val,t_expr,t_num_val.type)
         
         case UnOp('-',vari):
             tvari=typecheck(vari)
@@ -474,6 +507,16 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 print(right_type)
                 raise InvalidProgram()
             return int( eval2(left )) << int( eval2(right ))
+        case BinOp("+=",left,right):
+            left_type=typecheck(left).type
+            right_type=typecheck(right).type
+            rtype=[NumType,VarType]
+            if(left_type!=VarType or right_type not in rtype):
+                raise InvalidProgram()
+            val=eval2(Get(left))
+            new_val=val+(eval2(right))
+            eval2(Put(left,NumLiteral(new_val)))
+            return eval2(NumLiteral(new_val))
 
         case PrintOp(inp):
             print(eval2(inp))
@@ -513,15 +556,19 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case UnOp('-',vari):
             un= eval2(vari )
             un=-un
+            eval2(Put(vari,NumLiteral(un)))
             return  eval2(NumLiteral(un) )
         case UnOp('++',vari):
             un= eval2(vari )
             un=un+1
+            eval2(Put(vari,NumLiteral(un)))
             return  eval2(NumLiteral(un) )
         case UnOp('--',vari):
             un= eval2(vari )
             un=un-1
+            eval2(Put(vari,NumLiteral(un)))
             return  eval2(NumLiteral(un) )
+        
 
         # IfElse
         case IfElse(c,l,r):
@@ -607,6 +654,33 @@ def eval(program: AST, environment: Environment = None) -> Value:
                     break
             environment.exit_scope()
             return
+        case LetFun(Variable(_) as v, params, body, expr):
+            environment.enter_scope()
+            environment.add(v, FnObject(params, body))
+            v = eval2(expr)
+            environment.exit_scope()
+            return v
+        case FunCall(Variable(_) as v, args):
+            fn = environment.get(v)
+            argv = []
+            for arg in args:
+                argv.append(eval2(arg))
+            environment.enter_scope()
+            for param, arg in zip(fn.params, argv):
+                environment.add(param, arg)
+            v = eval2(fn.body)
+            environment.exit_scope()
+            return v
         
     raise InvalidProgram()
 
+# a=Variable('a')
+# b=Variable('b')
+# n1=NumLiteral(10)
+# n2=NumLiteral(3)
+# n3=NumLiteral(0)
+# con=BinOp('<',a,n1)
+# up=UnOp('++',a)
+# body=Let(a,n1,BinOp('+=',a,Let(b,n2,n2)))
+# f=Let(a,n3,For(con,up,PrintOp(BinOp('+=',a,Let(b,n2,n2)))))
+# eval(f)

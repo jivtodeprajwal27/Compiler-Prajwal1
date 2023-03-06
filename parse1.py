@@ -61,7 +61,7 @@ Token = Num | Bool | Keyword | Identifier | Operator | List| String| Method
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then else end while do done let in list String len".split()
+keywords = "if then else end while do done let in list String len length".split()
 symbolic_operators = "+ - * / < > ≤ ≥ = ≠".split()
 word_operators = "and or not quot rem".split()
 starting_braces='[ ('.split()
@@ -83,8 +83,10 @@ def word_to_token(word):
         return List(ast.literal_eval(word))
     if word.startswith('"') and word.endswith('"'):
         return String(word)
+    if "." in word:
+        word=word.split('.')
+        return Method(word[1],Identifier(word[0]))
     if word.startswith('len(') and word.endswith(')'):
-
         return Method('len',Identifier(word[4:-1]))
 
     return Identifier(word)
@@ -122,7 +124,21 @@ class Lexer:
                     while True:
                         try:
                             c = self.stream.next_char()
-                            if c.isalpha() or c in starting_braces or c in ending_braces:
+                            if (c=='.'):
+                                s=s+c
+                               
+                                while True:
+                                    try:
+                                        nc=self.stream.next_char()
+                                        if nc.isalpha():
+                                            s=s+nc
+                                        else:
+                                            return word_to_token(s)
+                                    except EndOfStream:
+                                        return word_to_token(s)
+
+
+                            elif c.isalpha() or c in starting_braces or c in ending_braces:
                                 s = s + c
                             else:
                                 self.stream.unget()
@@ -154,7 +170,7 @@ class Lexer:
 
                         except EndOfStream:
                             return word_to_token(s)
-
+                
 
 
 
@@ -229,6 +245,7 @@ class Parser:
 
         self.lexer.match(Method('len',Identifier(m.identifier.word)))
 
+
         return ListOp('length',Variable(m.identifier.word))
 
     def parse_atom(self):
@@ -268,6 +285,9 @@ class Parser:
                 case _:
                     break
         return left
+    def parse_length(self,m):
+        self.lexer.match(Method('length',Identifier(m.identifier.word)))
+        return ListOp('length',Variable(m.identifier.word))
 
     def parse_cmp(self):
         left = self.parse_add()
@@ -282,7 +302,9 @@ class Parser:
         return self.parse_cmp()
 
     def parse_expr(self):
+        
         match self.lexer.peek_token():
+            
             case Keyword("let"):
                 return self.parse_let()
             case Keyword("if"):
@@ -291,8 +313,11 @@ class Parser:
                 return self.parse_list()
             case Keyword("String"):
                 return self.parse_string()
+            case Method('length',Identifier(name)):
+                return self.parse_length(Method('length',Identifier(name)))
             case Method("len",Identifier(name)):
                 return self.parse_len(Method("len",Identifier(name)))
+            
             case _:
                 return self.parse_simple()
 
@@ -306,13 +331,12 @@ def test_parse():
     # print(parse("if a+b > c*d then a*b + c + d else e*f/g end"))
     # print(parse('let a=3 in a*a end'))
     # print(parse('let a=list [1,2,3]  in a end')) #working fine
-    print(eval(parse('let a=list [1,2,3,4,5]  in len(a) end')))
+    # print(eval(parse('let a=list [1,2,3,4,5]  in len(a) end')))
     # print(parse('String "this is a string"'))
-    print(eval(parse('let abc= String "have a nice day sir" in len(abc) end')))
+    # print(eval(parse('let abc= String "have a nice day sir" in len(abc) end')))
     # print(parse('list [1,2,3] end'))
     # print(eval(parse('let a=3 in a*a end')))
     # print(parse('if 3+4 >2 then 3 else 5 end'))
     # print(eval(parse('if 3+4 > 8 then 3 else 5 end')))
-
-
+    print((parse('let abc=list [1,2,3,4,5] in abc.length end')))
 test_parse()
