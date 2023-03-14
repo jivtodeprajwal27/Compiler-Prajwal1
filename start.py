@@ -364,6 +364,7 @@ class InvalidProgram(Exception):
 
 
 def eval(program: AST, environment: Environment = None) -> Value:
+  
     if environment is None:
         environment =Environment()
     
@@ -382,6 +383,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case FracLiteral(value):
             return value
         case Variable(name):
+            print(Variable(name))
             return environment.get(name)
         case ListLiteral(value):
             # print(f'values: {value}')
@@ -418,6 +420,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 v = eval2(thing)
             return v
         case BinOp("+", left, right):
+    
             return eval2(left) + eval2(right)
         case BinOp("-", left, right):
             return eval2(left) - eval2(right)
@@ -655,8 +658,10 @@ def eval(program: AST, environment: Environment = None) -> Value:
             environment.exit_scope()
             return
         case LetFun(Variable(_) as v, params, body, expr):
+            print("expr: ",expr)
             environment.enter_scope()
             environment.add(v, FnObject(params, body))
+            
             v = eval2(expr)
             environment.exit_scope()
             return v
@@ -668,11 +673,23 @@ def eval(program: AST, environment: Environment = None) -> Value:
             environment.enter_scope()
             for param, arg in zip(fn.params, argv):
                 environment.add(param, arg)
+            print("fn: ",fn.body)
             v = eval2(fn.body)
             environment.exit_scope()
             return v
         
     raise InvalidProgram()
+
+def test_letfun():
+    a = Variable("a")
+    b = Variable("b")
+    f = Variable("f")
+    c=FunCall(f,[NumLiteral(2),NumLiteral(1)])
+    e=LetFun(f,[a,b],BinOp("+",a,b),c)
+
+    print(eval(e))
+
+# test_letfun()
 
 # a=Variable('a')
 # b=Variable('b')
