@@ -1,5 +1,4 @@
 from start import *
-import ast
 class EndOfStream(Exception):
     pass
 
@@ -44,52 +43,38 @@ class Operator:
     op: str
 
 @dataclass
-class List:
-    b:ListLiteral
-@dataclass
-class String:
-    s:str
+class BitwiseOperator:
+    op: str
 
 @dataclass
-class Method:
-    method_name:str
-    identifier:Identifier
+class  UnaryOperator:
+    op: str
 
-Token = Num | Bool | Keyword | Identifier | Operator | List| String| Method
-
+Token = Num | Bool | Keyword | Identifier | Operator | BitwiseOperator | UnaryOperator
 
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then else end while done let in list String len length do".split()
-symbolic_operators = "+ - * / < > ≤ ≥ = ≠ ++ ==".split()
-unary_operators="++ --".split()
+keywords = "if then else end while do done let in for up print".split()
+symbolic_operators = "+ - * / < > ≤ ≥ =  == ≠ ~".split()
+unary_operators= "++ -- - ~".split()
 word_operators = "and or not quot rem".split()
-starting_braces='[ ('.split()
-ending_braces='] )'.split()
-quotes='"'
-
 whitespace = " \t\n"
+Bitwise_Operators="& | ^ >> <<".split()
 
 def word_to_token(word):
     if word in keywords:
         return Keyword(word)
     if word in word_operators:
         return Operator(word)
+    if word in Bitwise_Operators:
+        return BitwiseOperator(word)
+    if word in unary_operators:
+        return UnaryOperator(word)
     if word == "True":
         return Bool(True)
     if word == "False":
         return Bool(False)
-    if word.startswith('[') and word.endswith(']'):
-        return List(ast.literal_eval(word))
-    if word.startswith('"') and word.endswith('"'):
-        return String(word)
-    if "." in word:
-        word=word.split('.')
-        return Method(word[1],Identifier(word[0]))
-    if word.startswith('len(') and word.endswith(')'):
-        return Method('len',Identifier(word[4:-1]))
-
     return Identifier(word)
 
 class TokenError(Exception):
@@ -104,20 +89,28 @@ class Lexer:
         return Lexer(s)
 
     def next_token(self) -> Token:
-        
         try:
             match self.stream.next_char():
-                case c if c in symbolic_operators: 
-                    n=c
-                    l=self.stream.next_char()
-                    n+=l
-                    if(n in unary_operators):
-                        return Operator(n)
-                    else:
-                        self.stream.unget()
+                # case c if c in symbolic_operators: return Operator(c)
+                case c if c in Bitwise_Operators: return BitwiseOperator(c)
+                # case c if c in unary_operators: return UnaryOperator(c)
+
+                case c if c in symbolic_operators:
+                    try:
+                        c2 = self.stream.next_char()
+                        if c==c2:
+                            s=c+c2
+                            if s in unary_operators:
+                                return UnaryOperator(s)
+                            if s in Bitwise_Operators:
+                                return BitwiseOperator(s)
+                        else:
+                            self.stream.unget()
+                            return Operator(c)
+                    except EndOfStream:
                         return Operator(c)
+
                 case c if c.isdigit():
-                    
                     n = int(c)
                     while True:
                         try:
@@ -131,71 +124,28 @@ class Lexer:
                             return Num(n)
 
                 case c if c.isalpha():
-                    
                     s = c
                     while True:
                         try:
                             c = self.stream.next_char()
-                            if (c=='.'):
-                                s=s+c
-                                while True:
-                                    try:
-                                        nc=self.stream.next_char()
-                                        if nc.isalpha():
-                                            s=s+nc
-                                        else:
-                                            return word_to_token(s)
-                                    except EndOfStream:
-                                       
-                                        return word_to_token(s)
-
-
-                            elif c.isalpha() or c in starting_braces or c in ending_braces:
-                                s = s + c
-                            
-                            
+                            if c.isalnum() or c == '_':
+                                s += c
                             else:
                                 self.stream.unget()
                                 return word_to_token(s)
                         except EndOfStream:
                             return word_to_token(s)
+
                 case c if c in whitespace:
-                    
                     return self.next_token()
-                case c if c in starting_braces:
-                    s=c
-                    while True:
-                        try:
-                            c=self.stream.next_char()
-                            s=s+c
-                            if c in ending_braces:
-                                return word_to_token(s)
-
-                        except EndOfStream:
-                            return word_to_token(s)
-
-                case c if c in quotes:
-                    s=c
-                    while True:
-                        try:
-                            c=self.stream.next_char()
-                            s+=c
-                            if c in quotes:
-                                return word_to_token(s)
-
-                        except EndOfStream:
-                            return word_to_token(s)
-
-                        
         except EndOfStream:
             raise EndOfTokens
 
+
     def peek_token(self) -> Token:
         if self.save is not None:
-           
             return self.save
         self.save = self.next_token()
-        
         return self.save
 
     def advance(self):
@@ -203,7 +153,6 @@ class Lexer:
         self.save = None
 
     def match(self, expected):
-        
         if self.peek_token() == expected:
             return self.advance()
         raise TokenError()
@@ -242,33 +191,24 @@ class Parser:
         self.lexer.match(Keyword("in"))
         a=self.parse_expr()
         return Let(c,b,a)
+
+        
+    def parse_for(self):
+        self.lexer.match(Keyword('for'))
+        c=self.parse_expr()
+        self.lexer.match(Keyword('up'))
+        u=self.parse_expr()
+        self.lexer.match(Keyword('do'))
+        b=self.parse_expr()
+        return For(c,u,b)
     
-
-    def parse_list(self):
-        self.lexer.match(Keyword('list'))
-        match self.lexer.peek_token():
-            case List(name):
-                self.lexer.advance()
-                return ListLiteral(name)
-    def parse_string(self):
-        self.lexer.match(Keyword('String'))
-        match self.lexer.peek_token():
-            case String(name):
-                self.lexer.advance()
-                return StringLiteral(name)
-
-    def parse_len(self,m):
-
-        self.lexer.match(Method('len',Identifier(m.identifier.word)))
-
-
-        return ListOp('length',Variable(m.identifier.word))
-
+    def parse_print(self):
+        self.lexer.match(Keyword('print'))
+        p=self.parse_expr()
+        return PrintOp(p)
+    
     def parse_atom(self):
         match self.lexer.peek_token():
-            case Operator(value):
-                self.lexer.advance()
-                return Operator(value)
             case Identifier(name):
                 self.lexer.advance()
                 return Variable(name)
@@ -278,21 +218,16 @@ class Parser:
             case Bool(value):
                 self.lexer.advance()
                 return BoolLiteral(value)
-            
-    def parse_unary(self):
-        left=self.parse_atom()
-        while True:
-            match self.lexer.peek_token():
-                case Operator(op) if op in "++ --".split():
-                    
-                    self.lexer.advance()
-                    left = UnOp(op, left)
-                case _:
-                    break
-        return left
+            case Operator(value):
+                self.lexer.advance()
+                return Operator(value)
+            case BitwiseOperator(value):
+                return BitwiseOperator(value)
+            case UnaryOperator(value):
+                return UnaryOperator(value)
 
     def parse_mult(self):
-        left = self.parse_unary()
+        left = self.parse_atom()
         while True:
             match self.lexer.peek_token():
                 case Operator(op) if op in "*/":
@@ -314,62 +249,74 @@ class Parser:
                 case _:
                     break
         return left
-    def parse_length(self,m):
-        self.lexer.match(Method('length',Identifier(m.identifier.word)))
-        return ListOp('length',Variable(m.identifier.word))
-
+            
     def parse_cmp(self):
         left = self.parse_add()
-        match self.lexer.peek_token():
-            case Operator(op) if op in "<>":
-                self.lexer.advance()
-                right = self.parse_add()
-                return BinOp(op, left, right)
+        while True:
+            match self.lexer.peek_token():
+                case Operator(op) if op in symbolic_operators :
+                    self.lexer.advance()
+                    m = self.parse_add()
+                    left=BinOp(op, left, m)
+                case UnaryOperator(op) if op in unary_operators:
+                    self.lexer.advance()
+                    left=UnOp(op,left)
+                case _:
+                    break
+        return left
+    
+    def parse_bitwise(self):
+        left = self.parse_cmp()
+        while True:
+            match self.lexer.peek_token():
+                case BitwiseOperator(op) if op in "& ^ | >> <<":
+                    self.lexer.advance()
+                    m = self.parse_cmp()
+                    left = BinOp(op, left, m)
+                case _:
+                    break
         return left
 
     def parse_simple(self):
-        return self.parse_cmp()
+        return self.parse_bitwise()
 
     def parse_expr(self):
-        
         match self.lexer.peek_token():
+            case Keyword("if"):
+                return self.parse_if()
             
             case Keyword("let"):
                 return self.parse_let()
-            case Keyword("if"):
-                return self.parse_if()
-            case Keyword("list"):
-                return self.parse_list()
-            case Keyword("String"):
-                return self.parse_string()
-            case Method('length',Identifier(name)):
-                return self.parse_length(Method('length',Identifier(name)))
-            case Method("len",Identifier(name)):
-                return self.parse_len(Method("len",Identifier(name)))
-
+            
+            case Keyword("for"):
+                return self.parse_for()
+            
+            case Keyword("print"):
+                return self.parse_print()
+    
             case _:
-             
                 return self.parse_simple()
 
 def test_parse():
     def parse(string):
-
+      
         return Parser.parse_expr (
             Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
         )
     # You should parse, evaluate and see whether the expression produces the expected value in your tests.
-    # print(parse("if a+b > c*d then a*b + c + d else e*f/g end"))
+    # print(parse("if a+b > c×d then a×b + c + d else e×f/g end"))
     # print(parse('let a=3 in a*a end'))
-    # print(parse('let a=list [1,2,3]  in a end')) #working fine
-    # print(eval(parse('let a=list [1,2,3,4,5]  in len(a) end')))
-    # print(parse('String "this is a string"'))
-    print(eval(parse('let abc= String "have a nice day sir" in len(abc) end')))
-    # print(parse('list [1,2,3] end'))
     # print(eval(parse('let a=3 in a*a end')))
     # print(parse('if 3+4 >2 then 3 else 5 end'))
-    # print(parse('let a =2 in a+4 end'))
-    # print(eval(parse('if 3+4 > 8 then 3 else 5 end')))
-    # print(eval(parse('let abc=list [1,2,3,4,5] in abc.length end')))
-    print(eval(parse("let a=67 in a-- end")))
-    
+    # print(eval(parse('if 3+4 >8 then 3 else 5 end')))
+    # print(eval(parse('6 > 3 end')))
+    print(eval(parse('6 ^ 7 end')))
+    print(parse("let a=1 in for a<10 up a++ do print a end"))
+    print(eval(parse('let a=0 in print a-- end')))
+    print(parse(' 6 << 3 end'))
+    print(eval(parse(' 6 << 3 end')))
+    print(parse(' 6 >> 3 end'))
+    print(eval(parse(' 6 >> 3 end')))
+   
+
 test_parse()
