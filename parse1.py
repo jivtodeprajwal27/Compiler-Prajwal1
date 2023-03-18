@@ -71,7 +71,8 @@ class EndOfTokens(Exception):
 
 keywords = "if then else end while done let in list String len length do".split()
 symbolic_operators = "+ - * / < > ≤ ≥ = ≠ ++ ==".split()
-unary_operators="++ --".split()
+unary_operators="++ -- - ~".split()
+Bitwise_Operators="& | ^ >> <<".split()
 word_operators = "and or not quot rem".split()
 starting_braces='[ ('.split()
 ending_braces='] )'.split()
@@ -438,4 +439,3 @@ def test_parse():
     # (eval(parse('let a=1 in let b=1 in for a<10 up a++ do print a+b end')))
     # Sum 10 digit
     eval(parse('let a = 1 in let b=0 in for a<=10 up a++ do print b+= a end'))
-test_for()
