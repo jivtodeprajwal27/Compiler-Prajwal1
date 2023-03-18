@@ -61,9 +61,9 @@ Token = Num | Bool | Keyword | Identifier | Operator | List| String| Method
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then else end while done let in list String len length do".split()
+keywords = "if then else end while done let in list String len length do  for up print".split()
 symbolic_operators = "+ - * / < > ≤ ≥ = ≠ ++ ==".split()
-unary_operators="++ --".split()
+unary_operators="++ -- +=".split()
 word_operators = "and or not quot rem".split()
 starting_braces='[ ('.split()
 ending_braces='] )'.split()
@@ -242,6 +242,12 @@ class Parser:
         self.lexer.match(Keyword("in"))
         a=self.parse_expr()
         return Let(c,b,a)
+    def parse_print(self):
+        
+        self.lexer.match(Keyword('print'))
+        p=self.parse_expr()
+        self.lexer.advance()
+        return PrintOp(p)
     
 
     def parse_list(self):
@@ -278,9 +284,31 @@ class Parser:
             case Bool(value):
                 self.lexer.advance()
                 return BoolLiteral(value)
+    def parse_for(self):
+        self.lexer.match(Keyword('for'))
+        c=self.parse_expr()
+        self.lexer.match(Keyword('up'))
+        u=self.parse_expr()
+        self.lexer.match(Keyword('do'))
+        b=self.parse_expr()
+        return For(c,u,b)
+    
+    def parse_assign(self):
+        left=self.parse_atom()
+        while True:
+            match self.lexer.peek_token():
+                case Operator(op) if op=="+=":
+                    self.lexer.advance()
+                    m=self.parse_atom()
+                    left = BinOp(op, left, m)
+                case _:
+                    break
+        return left
+
+
             
     def parse_unary(self):
-        left=self.parse_atom()
+        left=self.parse_assign()
         while True:
             match self.lexer.peek_token():
                 case Operator(op) if op in "++ --".split():
@@ -333,22 +361,24 @@ class Parser:
     def parse_expr(self):
         
         match self.lexer.peek_token():
-            
             case Keyword("let"):
                 return self.parse_let()
             case Keyword("if"):
                 return self.parse_if()
             case Keyword("list"):
                 return self.parse_list()
+            case Keyword("for"):
+                return self.parse_for()
             case Keyword("String"):
                 return self.parse_string()
             case Method('length',Identifier(name)):
                 return self.parse_length(Method('length',Identifier(name)))
             case Method("len",Identifier(name)):
                 return self.parse_len(Method("len",Identifier(name)))
+            case Keyword("print"):
+                return self.parse_print()
 
             case _:
-             
                 return self.parse_simple()
 
 def test_parse():
@@ -363,13 +393,26 @@ def test_parse():
     # print(parse('let a=list [1,2,3]  in a end')) #working fine
     # print(eval(parse('let a=list [1,2,3,4,5]  in len(a) end')))
     # print(parse('String "this is a string"'))
-    print(eval(parse('let abc= String "have a nice day sir" in len(abc) end')))
+    # print(eval(parse('let abc= String "have a nice day sir" in len(abc) end')))
     # print(parse('list [1,2,3] end'))
     # print(eval(parse('let a=3 in a*a end')))
     # print(parse('if 3+4 >2 then 3 else 5 end'))
     # print(parse('let a =2 in a+4 end'))
     # print(eval(parse('if 3+4 > 8 then 3 else 5 end')))
     # print(eval(parse('let abc=list [1,2,3,4,5] in abc.length end')))
-    print(eval(parse("let a=67 in a-- end")))
+    # print(parse("let a=1 in for a<10 up a++ do print a end"))
+
+def test_for():
+    def parse(string):
     
-test_parse()
+        return Parser.parse_expr (
+            Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
+        )
+    
+    # print(parse("let a=1 in let b=1 in for a<10 up a++ do print a+b end"))
+    # eval(parse("let a=121 in let b=10 in a+1 in print b+a end"))
+    eval(parse('let a=1 in let b=1 in for a<10 up a++ do print b+=b*a in print a end'))
+    print(eval(parse('let a=4 in let b=9 in let c=0 in c+= b*a in c end')))
+    # (eval(parse('let a=1 in let b=1 in for a<10 up a++ do print a+b end')))
+
+test_for()
