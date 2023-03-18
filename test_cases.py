@@ -1164,6 +1164,18 @@ def test_for_iteration():
     body_array=PrintOp(ListOp("get",array,v))
     f=Let(v,n1,For(condition,update,body_array))
     eval(f)
+    
+def test_while():
+    v=Variable('v')
+    n1=NumLiteral(0)
+    s=NumLiteral(9)
+    condition=BinOp("<",v,s)
+
+    body = PrintOp(UnOp("++", v))
+    w = Whilethen(condition, body)
+    l = Let(v,n1, w)
+    eval(l)  
+    # output =  1 2 3 4 5 6 7 8 9
 
 
 # test_let_eval()
@@ -1194,3 +1206,4 @@ def test_for_iteration():
 # test_ls_rs()
 # test_bit()
 # test_typecheck_BinOp()
+# test_while()
