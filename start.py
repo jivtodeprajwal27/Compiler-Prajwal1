@@ -383,6 +383,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case FracLiteral(value):
             return value
         case Variable(name):
+            print(Variable(name))
             return environment.get(name)
         case ListLiteral(value):
             # print(f'values: {value}')
@@ -419,6 +420,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 v = eval2(thing)
             return v
         case BinOp("+", left, right):
+    
             return eval2(left) + eval2(right)
         case BinOp("-", left, right):
             return eval2(left) - eval2(right)
@@ -655,6 +657,16 @@ def eval(program: AST, environment: Environment = None) -> Value:
                     break
             environment.exit_scope()
             return
+        case Whilethen(condition,then_body):
+            environment.enter_scope()
+            condi = eval2(condition)
+            while(condi == True):
+                eval2(then_body)
+                condi = eval2(condition)
+                if(condi == False):
+                    break
+            environment.exit_scope()
+            return
         case LetFun(Variable(_) as v, params, body, expr):
             print("expr: ",expr)
             environment.enter_scope()
@@ -687,7 +699,7 @@ def test_letfun():
 
     print(eval(e))
 
-test_letfun()
+# test_letfun()
 
 # a=Variable('a')
 # b=Variable('b')
