@@ -411,8 +411,9 @@ def test_for():
     
     # print(parse("let a=1 in let b=1 in for a<10 up a++ do print a+b end"))
     # eval(parse("let a=121 in let b=10 in a+1 in print b+a end"))
-    eval(parse('let a=1 in let b=1 in for a<10 up a++ do print b+=b*a in print a end'))
-    print(eval(parse('let a=4 in let b=9 in let c=0 in c+= b*a in c end')))
+    # eval(parse('let a=1 in let b=1 in for a<10 up a++ do print b+=b*a end'))
+    # (eval(parse('let a=4 in let b=9 in let c=0 in print c+= b*a end')))
     # (eval(parse('let a=1 in let b=1 in for a<10 up a++ do print a+b end')))
-
+    # Sum 10 digit
+    eval(parse('let a = 1 in let b=0 in for a<=10 up a++ do print b+= a end'))
 test_for()
