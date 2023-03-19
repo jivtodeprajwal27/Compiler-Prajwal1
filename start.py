@@ -418,6 +418,16 @@ def eval(program: AST, environment: Environment = None) -> Value:
             for thing in things:
                 v = eval2(thing)
             return v
+        
+        case LetConst(Variable(name),e1,e2):
+            v1 = eval2(e1)
+            if(environment.check(name) != None):
+                print("Variable name exists")
+                raise InvalidProgram()
+            environment.enter_scope()
+            environment.add(name,v1)
+            v2 = eval2(e2)
+            
         case BinOp("+", left, right):
             return eval2(left) + eval2(right)
         case BinOp("-", left, right):
@@ -658,6 +668,16 @@ def eval(program: AST, environment: Environment = None) -> Value:
                     break 
             environment.exit_scope()
             return None
+        case Whilethen(condition,then_body):
+            environment.enter_scope()
+            condi = eval2(condition)
+            while(condi == True):
+                eval2(then_body)
+                condi = eval2(condition)
+                if(condi == False):
+                    break
+            environment.exit_scope()
+            return
         
         
     raise InvalidProgram()

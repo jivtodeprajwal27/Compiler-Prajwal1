@@ -438,11 +438,11 @@ def test_LetConst():
     # print(eval(e2))
     assert eval(e2) == 3
 
-    a = Variable("a")
-    b = Variable("b")
-    e1 = LetConst(b, NumLiteral(2), Put(a, BinOp("+", Get(a), Get(b))))
-    e2 = LetConst(b, NumLiteral(1), Seq([e1, Get(a)]))
-    print(eval(e2))
+    # a = Variable("a")
+    # b = Variable("b")
+    # e1 = LetConst(b, NumLiteral(2), Put(a, BinOp("+", Get(a), Get(b))))
+    # e2 = LetConst(b, NumLiteral(1), Seq([e1, Get(a)]))
+    # print(eval(e2))
 
     #  Outpout of the above program is error msg Variable name exists.
 
@@ -516,32 +516,16 @@ def test_for_iteration():
 test_for_iteration()
 x=Variable('x')
 
-# test_let_eval()
-# test_div_operator()
-# test_modulus_operator()
-# test_power_operator()
-# test_floor_div_operator()
-# test_equal_operator()
-# test_not_equal_operator()
-# test_greter_than_operator()
-# test_less_than_operator()
-# test_less_than_equal_operator()
+def test_while():
+    v=Variable('v')
+    n1=NumLiteral(0)
+    s=NumLiteral(9)
+    condition=BinOp("<",v,s)
 
-# test_div_operator()
-# test_modulus_operator()
-# test_power_operator()
-# test_floor_div_operator()
-# test_equal_operator()
-# test_not_equal_operator()
-# test_greter_than_operator()
-# test_less_than_operator()
-# test_less_than_equal_operator()
-# test_string()
-# # test_UnBoolify()
-# test_if_Else()
-# test_list()
-# test_unop()
-# test_ls_rs()
-# test_bit()
+    body = PrintOp(UnOp("++", v))
+    w = Whilethen(condition, body)
+    l = Let(v,n1, w)
+    eval(l)  
+    # output =  1 2 3 4 5 6 7 8 9
 
     
