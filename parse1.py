@@ -1,5 +1,6 @@
 from start import *
 import ast
+from typing import TextIO
 class EndOfStream(Exception):
     pass
 
@@ -7,6 +8,9 @@ class EndOfStream(Exception):
 class Stream:
     source: str
     pos: int
+
+    def from_file(file):
+        return Stream(file.read(), 0)
 
     def from_string(s):
         return Stream(s, 0)
@@ -415,5 +419,12 @@ def test_for():
     # (eval(parse('let a=4 in let b=9 in let c=0 in print c+= b*a end')))
     # (eval(parse('let a=1 in let b=1 in for a<10 up a++ do print a+b end')))
     # Sum 10 digit
-    eval(parse('let a = 1 in let b=0 in for a<=10 up a++ do print b+= a end'))
+    #eval(parse('let a = 1 in let b=0 in for a<=10 up a++ do print b+= a end'))
 test_for()
+
+with open("myfile.txt") as f:
+    stream = Stream.from_file(f)
+    lexer = Lexer(stream)
+    parser = Parser.from_lexer(lexer)
+    ast = Parser.parse_expr(parser)
+    print(eval(ast))
