@@ -63,6 +63,8 @@ class EndOfTokens(Exception):
 
 keywords = "if then else end while done let in list String len length do  for up print done".split()
 symbolic_operators = "+ - * / < > <= >= = ≠ ++ ==".split()
+keywords = "if then else end while done let in list String len length do  for up print done".split()
+symbolic_operators = "+ - * / < > <= >= = ≠ ++ ==".split()
 unary_operators="++ -- +=".split()
 double_operators='>= <='.split()
 word_operators = "and or not quot rem".split()
@@ -423,4 +425,5 @@ def test_for():
     # (eval(parse(' let b= String "Hello World" in let c= b.length in print c end')))
     # eval(parse('let b= String "hello world" in print b end '))
     
+
 test_for()
