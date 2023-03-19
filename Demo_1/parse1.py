@@ -8,6 +8,9 @@ class Stream:
     source: str
     pos: int
 
+    def from_file(file):
+        return Stream(file.read(), 0)
+    
     def from_string(s):
         return Stream(s, 0)
 
@@ -425,3 +428,11 @@ def test_for():
     
 
 test_for()
+
+with open("myfile.txt") as f:
+    stream = Stream.from_file(f)
+    lexer = Lexer(stream)
+    parser = Parser.from_lexer(lexer)
+    ast = Parser.parse_expr(parser)
+    #print(ast)
+    print(eval(ast))
