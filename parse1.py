@@ -61,13 +61,15 @@ Token = Num | Bool | Keyword | Identifier | Operator | List| String| Method
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then else end while done let in list String len length do  for up print".split()
-symbolic_operators = "+ - * / < > ≤ ≥ = ≠ ++ ==".split()
+keywords = "if then else end while done let in list String len length do  for up print done".split()
+symbolic_operators = "+ - * / < > <= >= = ≠ ++ ==".split()
 unary_operators="++ -- +=".split()
+double_operators='>= <='.split()
 word_operators = "and or not quot rem".split()
 starting_braces='[ ('.split()
 ending_braces='] )'.split()
 quotes='"'
+end_of_statement=";"
 
 whitespace = " \t\n"
 
@@ -107,11 +109,12 @@ class Lexer:
         
         try:
             match self.stream.next_char():
+                
                 case c if c in symbolic_operators: 
                     n=c
                     l=self.stream.next_char()
                     n+=l
-                    if(n in unary_operators):
+                    if(n in unary_operators or n in double_operators):
                         return Operator(n)
                     else:
                         self.stream.unget()
@@ -242,8 +245,8 @@ class Parser:
         self.lexer.match(Keyword("in"))
         a=self.parse_expr()
         return Let(c,b,a)
+    
     def parse_print(self):
-        
         self.lexer.match(Keyword('print'))
         p=self.parse_expr()
         self.lexer.advance()
@@ -349,7 +352,7 @@ class Parser:
     def parse_cmp(self):
         left = self.parse_add()
         match self.lexer.peek_token():
-            case Operator(op) if op in "<>":
+            case Operator(op) if op in "<>" or op in "<= >=".split():
                 self.lexer.advance()
                 right = self.parse_add()
                 return BinOp(op, left, right)
@@ -411,8 +414,13 @@ def test_for():
     
     # print(parse("let a=1 in let b=1 in for a<10 up a++ do print a+b end"))
     # eval(parse("let a=121 in let b=10 in a+1 in print b+a end"))
-    eval(parse('let a=1 in let b=1 in for a<10 up a++ do print b+=b*a in print a end'))
-    print(eval(parse('let a=4 in let b=9 in let c=0 in c+= b*a in c end')))
+    # eval(parse('let a=1 in let b=1 in for a<10 up a++ do print b+=b*a end'))
+    # (eval(parse('let a=4 in let b=9 in let c=1 in print c += b*a end')))
     # (eval(parse('let a=1 in let b=1 in for a<10 up a++ do print a+b end')))
-
+    # Sum 10 digit
+    eval(parse('let a = 1 in let b=0 in for a<=10 up a++ do print b+=a  end'))
+    # print(parse('let a=1 in for a<2 up a++ do print a+2 in let b=1 in print b end'))
+    # (eval(parse(' let b= String "Hello World" in let c= b.length in print c end')))
+    # eval(parse('let b= String "hello world" in print b end '))
+    
 test_for()
