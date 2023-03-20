@@ -457,3 +457,5 @@ with open("myfile.txt") as f:
     ast = Parser.parse_expr(parser)
     #print(ast)
     print(eval(ast))
+    f.close()
+
