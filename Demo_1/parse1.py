@@ -58,7 +58,11 @@ class Method:
     method_name:str
     identifier:Identifier
 
-Token = Num | Bool | Keyword | Identifier | Operator | List| String| Method
+@dataclass
+class BitwiseOperator:
+    op:str
+
+Token = Num | Bool | Keyword | Identifier | Operator | BitwiseOperator | List| String| Method
 
 
 class EndOfTokens(Exception):
@@ -67,7 +71,7 @@ class EndOfTokens(Exception):
 keywords = "if then else end while done let in list String len length do  for up print".split()
 symbolic_operators = "+ - * / < > <= >= = ≠ ++ ==".split()
 unary_operators="++ -- +=".split()
-double_operators='>= <='.split()
+double_operators='>= <= << >>'.split()
 word_operators = "and or not quot rem".split()
 starting_braces='[ ('.split()
 ending_braces='] )'.split()
@@ -76,11 +80,15 @@ end_of_statement=";"
 
 whitespace = " \t\n"
 
+Bitwise_Operators="& | ^".split()
+
 def word_to_token(word):
     if word in keywords:
         return Keyword(word)
     if word in word_operators:
         return Operator(word)
+    if word in Bitwise_Operators:
+        return BitwiseOperator(word)
     if word == "True":
         return Bool(True)
     if word == "False":
@@ -112,7 +120,7 @@ class Lexer:
         
         try:
             match self.stream.next_char():
-                
+                case c if c in Bitwise_Operators: return BitwiseOperator(c)
                 case c if c in symbolic_operators: 
                     n=c
                     l=self.stream.next_char()
@@ -348,6 +356,7 @@ class Parser:
                 case _:
                     break
         return left
+    
     def parse_length(self,m):
         self.lexer.match(Method('length',Identifier(m.identifier.word)))
         return ListOp('length',Variable(m.identifier.word))
@@ -355,14 +364,26 @@ class Parser:
     def parse_cmp(self):
         left = self.parse_add()
         match self.lexer.peek_token():
-            case Operator(op) if op in "<>" or op in "<= >=".split():
+            case Operator(op) if op in "<>" or op in "<= >= << >>".split():
                 self.lexer.advance()
                 right = self.parse_add()
                 return BinOp(op, left, right)
         return left
 
+    def parse_bitwise(self):
+        left = self.parse_cmp()
+        while True:
+            match self.lexer.peek_token():
+                case BitwiseOperator(op) if op in "& | ^":
+                    self.lexer.advance()
+                    right = self.parse_cmp()
+                    left = BinOp(op, left, right) 
+                case _:
+                    break
+        return left
+
     def parse_simple(self):
-        return self.parse_cmp()
+        return self.parse_bitwise()
 
     def parse_expr(self):
         
@@ -437,3 +458,4 @@ with open("myfile.txt") as f:
     #print(ast)
     print(eval(ast))
     f.close()
+
