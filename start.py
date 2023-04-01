@@ -383,7 +383,6 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case FracLiteral(value):
             return value
         case Variable(name):
-            print(Variable(name))
             return environment.get(name)
         case ListLiteral(value):
             # print(f'values: {value}')
@@ -419,18 +418,8 @@ def eval(program: AST, environment: Environment = None) -> Value:
             for thing in things:
                 v = eval2(thing)
             return v
-        
-        case LetConst(Variable(name),e1,e2):
-            v1 = eval2(e1)
-            if(environment.check(name) != None):
-                print("Variable name exists")
-                raise InvalidProgram()
-            environment.enter_scope()
-            environment.add(name,v1)
-            v2 = eval2(e2)
             
         case BinOp("+", left, right):
-    
             return eval2(left) + eval2(right)
         case BinOp("-", left, right):
             return eval2(left) - eval2(right)
@@ -659,38 +648,32 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 return bool(left_var)
             return bool(left_var)
         
-        case For(condition,update,body):
-            environment.enter_scope()
-            eval_cond=eval2(condition)
-            while(eval_cond):
+        case For(condition, update, body):
+            while eval2(condition):
+                environment.enter_scope()
                 eval2(body)
-                eval2(Put(update.vari,update))
-                cond=eval2(condition)
-                if(cond==False):
-                    break 
+                eval2(update)
+                environment.exit_scope()
+            return
+        
+        case Whilethen(condition,then_body):
+            environment.enter_scope()
+            condi = eval2(condition)
+            while(condi == True):
+                eval2(then_body)
+                condi = eval2(condition)
+                if(condi == False):
+                    break
             environment.exit_scope()
             return
         
+        
     raise InvalidProgram()
 
-def test_letfun():
-    a = Variable("a")
-    b = Variable("b")
-    f = Variable("f")
-    c=FunCall(f,[NumLiteral(2),NumLiteral(1)])
-    e=LetFun(f,[a,b],BinOp("+",a,b),c)
-
-    print(eval(e))
-
-test_letfun()
-
-# a=Variable('a')
-# b=Variable('b')
-# n1=NumLiteral(10)
+# a=Variable("a")
+# b=Variable("b")
+# n1=NumLiteral(1)
 # n2=NumLiteral(3)
-# n3=NumLiteral(0)
-# con=BinOp('<',a,n1)
-# up=UnOp('++',a)
-# body=Let(a,n1,BinOp('+=',a,Let(b,n2,n2)))
-# f=Let(a,n3,For(con,up,PrintOp(BinOp('+=',a,Let(b,n2,n2)))))
-# eval(f)
+
+# exp=Let(a,n1,Let(b,n1,For(BinOp("<",a,n2),BinOp("+=",a,b),For(BinOp("<",b,n2),UnOp("+=",b,),PrintOp(b)))))
+# eval(exp)

@@ -8,6 +8,9 @@ class Stream:
     source: str
     pos: int
 
+    def from_file(file):
+        return Stream(file.read(), 0)
+    
     def from_string(s):
         return Stream(s, 0)
 
@@ -55,18 +58,23 @@ class Method:
     method_name:str
     identifier:Identifier
 
-Token = Num | Bool | Keyword | Identifier | Operator | List| String| Method
+@dataclass
+class BitwiseOperator:
+    op:str
+@dataclass
+class EndStatement:
+    op:str
+
+Token = Num | Bool | Keyword | Identifier | Operator | BitwiseOperator | List| String| Method
 
 
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then else end while done let in list String len length do  for up print done".split()
-symbolic_operators = "+ - * / < > <= >= = ≠ ++ ==".split()
-keywords = "if then else end while done let in list String len length do  for up print done".split()
+keywords = "if then else end letend endfor while done let in list String len length do  for up print seq".split()
 symbolic_operators = "+ - * / < > <= >= = ≠ ++ ==".split()
 unary_operators="++ -- +=".split()
-double_operators='>= <='.split()
+double_operators='>= <= << >>'.split()
 word_operators = "and or not quot rem".split()
 starting_braces='[ ('.split()
 ending_braces='] )'.split()
@@ -75,11 +83,16 @@ end_of_statement=";"
 
 whitespace = " \t\n"
 
+Bitwise_Operators="& | ^".split()
+
 def word_to_token(word):
+    
     if word in keywords:
         return Keyword(word)
     if word in word_operators:
         return Operator(word)
+    if word in Bitwise_Operators:
+        return BitwiseOperator(word)
     if word == "True":
         return Bool(True)
     if word == "False":
@@ -111,7 +124,9 @@ class Lexer:
         
         try:
             match self.stream.next_char():
-                
+                case c if c in Bitwise_Operators: return BitwiseOperator(c)
+                case c if c in end_of_statement: 
+                    return EndStatement(c)
                 case c if c in symbolic_operators: 
                     n=c
                     l=self.stream.next_char()
@@ -151,7 +166,6 @@ class Lexer:
                                         else:
                                             return word_to_token(s)
                                     except EndOfStream:
-                                       
                                         return word_to_token(s)
 
 
@@ -246,6 +260,7 @@ class Parser:
         b=self.parse_expr()
         self.lexer.match(Keyword("in"))
         a=self.parse_expr()
+        # self.lexer.match(Keyword("letend"))
         return Let(c,b,a)
     
     def parse_print(self):
@@ -254,6 +269,33 @@ class Parser:
         self.lexer.advance()
         return PrintOp(p)
     
+    def parse_seq(self):
+        self.lexer.match(Keyword('seq'))
+        list=[]
+        while True:
+            match self.lexer.peek_token():
+                case EndStatement():
+                    continue
+                
+                case Keyword("end"):
+                    return Seq(list)
+                case Identifier(var):
+                    self.lexer.match(Identifier(var))
+                    val=0
+                    match self.lexer.peek_token():
+                        case Operator(op) if op in symbolic_operators or op in unary_operators:
+                            self.lexer.advance()
+                            val=self.parse_expr()
+                            self.lexer.advance()
+                            list.append(Put(Variable(var),val))
+                            continue
+                            
+                case _:
+                    list.append(self.parse_expr())  
+                    continue              
+                  
+            
+        
 
     def parse_list(self):
         self.lexer.match(Keyword('list'))
@@ -296,6 +338,7 @@ class Parser:
         u=self.parse_expr()
         self.lexer.match(Keyword('do'))
         b=self.parse_expr()
+        # self.lexer.match(Keyword('endfor'))
         return For(c,u,b)
     
     def parse_assign(self):
@@ -347,6 +390,7 @@ class Parser:
                 case _:
                     break
         return left
+    
     def parse_length(self,m):
         self.lexer.match(Method('length',Identifier(m.identifier.word)))
         return ListOp('length',Variable(m.identifier.word))
@@ -354,14 +398,30 @@ class Parser:
     def parse_cmp(self):
         left = self.parse_add()
         match self.lexer.peek_token():
-            case Operator(op) if op in "<>" or op in "<= >=".split():
+            case Operator(op) if op in "<>" or op in "<= >= << >>".split():
                 self.lexer.advance()
                 right = self.parse_add()
                 return BinOp(op, left, right)
         return left
 
+    def parse_bitwise(self):
+        left = self.parse_cmp()
+        while True:
+            match self.lexer.peek_token():
+                case BitwiseOperator(op) if op in "& | ^":
+                    self.lexer.advance()
+                    right = self.parse_cmp()
+                    left = BinOp(op, left, right) 
+                case _:
+                    break
+        return left
+
     def parse_simple(self):
-        return self.parse_cmp()
+        return self.parse_bitwise()
+    
+    
+
+        
 
     def parse_expr(self):
         
@@ -374,6 +434,8 @@ class Parser:
                 return self.parse_list()
             case Keyword("for"):
                 return self.parse_for()
+                
+                 
             case Keyword("String"):
                 return self.parse_string()
             case Method('length',Identifier(name)):
@@ -382,6 +444,8 @@ class Parser:
                 return self.parse_len(Method("len",Identifier(name)))
             case Keyword("print"):
                 return self.parse_print()
+            case Keyword("seq"):
+                return self.parse_seq()
 
             case _:
                 return self.parse_simple()
@@ -426,4 +490,13 @@ def test_for():
     # eval(parse('let b= String "hello world" in print b end '))
     
 
-test_for()
+# test_for()
+
+with open("myfile.txt") as f:
+    stream = Stream.from_file(f)
+    lexer = Lexer(stream)
+    parser = Parser.from_lexer(lexer)
+    ast = Parser.parse_expr(parser)
+    print(ast)
+    (eval(ast))
+    f.close()
