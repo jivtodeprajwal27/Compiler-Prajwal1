@@ -527,3 +527,8 @@ def test_while():
     l = Let(v,n1, w)
     eval(l)  
     # output =  1 2 3 4 5 6 7 8 9
+<<<<<<< HEAD
+
+    
+=======
+>>>>>>> 45827477c3a406aafee4dba10ba5cb79821a284e
