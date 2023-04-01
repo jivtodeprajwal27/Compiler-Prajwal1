@@ -260,7 +260,6 @@ class Parser:
         b=self.parse_expr()
         self.lexer.match(Keyword("in"))
         a=self.parse_expr()
-        # self.lexer.match(Keyword("letend"))
         return Let(c,b,a)
     
     def parse_print(self):

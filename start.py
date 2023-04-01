@@ -670,10 +670,3 @@ def eval(program: AST, environment: Environment = None) -> Value:
         
     raise InvalidProgram()
 
-# a=Variable("a")
-# b=Variable("b")
-# n1=NumLiteral(1)
-# n2=NumLiteral(3)
-
-# exp=Let(a,n1,Let(b,n1,For(BinOp("<",a,n2),BinOp("+=",a,b),For(BinOp("<",b,n2),UnOp("+=",b,),PrintOp(b)))))
-# eval(exp)
