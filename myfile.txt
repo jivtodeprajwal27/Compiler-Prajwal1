@@ -1,0 +1,11 @@
+let a=5 in
+let b=1 in
+let fact=1 in
+seq
+for b<=a up b+=1 do
+    seq
+    fact=fact*b;
+    endseq
+    end;
+print fact;
+endseq
