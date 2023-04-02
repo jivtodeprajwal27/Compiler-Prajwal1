@@ -72,7 +72,7 @@ Token = Num | Bool | Keyword | Identifier | Operator | BitwiseOperator | List| S
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then elif else end letend letconst  endfor while done let in list String len length do  for up print seq".split()
+keywords = "if then elif else end letend letconst  endfor while done let in list String len length do  for up print seq endseq".split()
 symbolic_operators = "+ - * / < > <= >= = ≠ ++ ==".split()
 unary_operators="++ -- +=".split()
 double_operators='>= <= << >>'.split()
