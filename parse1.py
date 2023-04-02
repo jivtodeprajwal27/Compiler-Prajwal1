@@ -11,6 +11,7 @@ class Stream:
     def from_file(file):
         return Stream(file.read(), 0)
     
+    
     def from_string(s):
         return Stream(s, 0)
 
@@ -71,7 +72,7 @@ Token = Num | Bool | Keyword | Identifier | Operator | BitwiseOperator | List| S
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then else end letend endfor while done let in list String len length do  for up print seq".split()
+keywords = "if then elif else end letend endfor while done let in list String len length do  for up print seq".split()
 symbolic_operators = "+ - * / < > <= >= = ≠ ++ ==".split()
 unary_operators="++ -- +=".split()
 double_operators='>= <= << >>'.split()
@@ -80,7 +81,7 @@ starting_braces='[ ('.split()
 ending_braces='] )'.split()
 quotes='"'
 end_of_statement=";"
-
+comma=",".split()
 whitespace = " \t\n"
 
 Bitwise_Operators="& | ^".split()
@@ -106,6 +107,8 @@ def word_to_token(word):
         return Method(word[1],Identifier(word[0]))
     if word.startswith('len(') and word.endswith(')'):
         return Method('len',Identifier(word[4:-1]))
+    if word in comma:
+        return Operator(word)
 
     return Identifier(word)
 
@@ -179,8 +182,9 @@ class Lexer:
                         except EndOfStream:
                             return word_to_token(s)
                 case c if c in whitespace:
-                    
                     return self.next_token()
+                case c if c in comma:
+                    return word_to_token(c)
                 case c if c in starting_braces:
                     s=c
                     while True:
@@ -244,14 +248,35 @@ class Parser:
         return Parser(lexer)
 
     def parse_if(self):
-        self.lexer.match(Keyword("if"))
-        c = self.parse_expr()
-        self.lexer.match(Keyword("then"))
-        t = self.parse_expr()
-        self.lexer.match(Keyword("else"))
-        f = self.parse_expr()
-        self.lexer.match(Keyword("end"))
-        return IfElse(c, t, f)
+        self.lexer.match(Keyword('if'))
+        c=self.parse_expr()
+        self.lexer.match(Keyword('then'))
+        b=self.parse_expr()
+        x=True
+        while x:
+            match self.lexer.peek_token():
+                case Keyword(ky) if ky=="else":
+                    self.lexer.advance()
+                    r=self.parse_expr()
+                    x=False
+                    return IfElse(c,b,r) 
+                case Keyword(ky) if ky=="elif":
+                    self.lexer.advance()
+                    c=self.parse_expr()
+                    self.lexer.match(Keyword('then'))
+                    b=self.parse_expr()
+                    x=True
+                    while x:
+                        match self.lexer.peek_token():
+                            case Keyword(ky) if ky=="else":
+                                self.lexer.advance()
+                                r=self.parse_expr()
+                                x=False
+                                return IfElse(c,b,r) 
+                            case _:
+                                return If(c,b)
+                case _:
+                    return If(c,b)
 
     def parse_let(self):
         self.lexer.match(Keyword('let'))
@@ -264,9 +289,18 @@ class Parser:
     
     def parse_print(self):
         self.lexer.match(Keyword('print'))
-        p=self.parse_expr()
-        self.lexer.advance()
-        return PrintOp(p)
+        args=[]
+        arg=self.parse_expr()
+        args.append(arg)
+        while True:
+            match self.lexer.peek_token():
+                case Operator(op) if op in comma: 
+                    self.lexer.advance()
+                    arg=self.parse_expr()
+                    args.append(arg)
+                case _:
+                    break
+        return PrintOp(args)
     
     def parse_seq(self):
         self.lexer.match(Keyword('seq'))
@@ -469,6 +503,8 @@ def test_parse():
     # print(eval(parse('if 3+4 > 8 then 3 else 5 end')))
     # print(eval(parse('let abc=list [1,2,3,4,5] in abc.length end')))
     # print(parse("let a=1 in for a<10 up a++ do print a end"))
+    print(eval(parse("let a=1 in let b=2 in if a>b then print a else print b end")))
+    print(eval(parse("let a=1 in let b=2 in if a<b then print a,b else print b end")))
 
 def test_for():
     def parse(string):
@@ -499,4 +535,3 @@ with open("myfile.txt") as f:
     print(ast)
     (eval(ast))
     f.close()
-
