@@ -72,7 +72,7 @@ Token = Num | Bool | Keyword | Identifier | Operator | BitwiseOperator | List| S
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then elif else end letend letconst  endfor while done let in list String len length do  for up print seq".split()
+keywords = "if then elif else end letend letconst  endfor while done let in list String len length do  for up print seq endseq".split()
 symbolic_operators = "+ - * / < > <= >= = ≠ ++ ==".split()
 unary_operators="++ -- +=".split()
 double_operators='>= <= << >>'.split()
@@ -319,7 +319,7 @@ class Parser:
                     break
         return PrintOp(args)
     
-    def parse_seq(self):
+        def parse_seq(self):
         self.lexer.match(Keyword('seq'))
         list=[]
         while True:
@@ -327,8 +327,22 @@ class Parser:
                 case EndStatement():
                     continue
                 
-                case Keyword("end"):
-                    return Seq(list)
+                case Keyword("endseq"):
+                    
+                    if self.lexer.next_token()==EndStatement(";"):
+                        self.lexer.advance()
+                        print(self.lexer.peek_token())
+                        try:
+                            match self.lexer.peek_token():
+                                case EndStatement():
+                                    raise ContinueOuterLoopException
+                        except ContinueOuterLoopException:
+                            
+                            continue
+                    else:    
+                        return Seq(list)
+                            
+
                 case Identifier(var):
                     self.lexer.match(Identifier(var))
                     val=0
@@ -342,7 +356,7 @@ class Parser:
                             
                 case _:
                     list.append(self.parse_expr())  
-                    continue              
+                    continue               
                   
             
         
