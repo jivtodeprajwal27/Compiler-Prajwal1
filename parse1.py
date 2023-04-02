@@ -72,7 +72,7 @@ Token = Num | Bool | Keyword | Identifier | Operator | BitwiseOperator | List| S
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then elif else end letend endfor while done let in list String len length do  for up print seq".split()
+keywords = "if then elif else end letend letconst  endfor while done let in list String len length do  for up print seq".split()
 symbolic_operators = "+ - * / < > <= >= = ≠ ++ ==".split()
 unary_operators="++ -- +=".split()
 double_operators='>= <= << >>'.split()
@@ -287,6 +287,23 @@ class Parser:
         a=self.parse_expr()
         return Let(c,b,a)
     
+    def parse_let_const(self):
+        self.lexer.match(Keyword('letConst'))
+        c=self.parse_atom()
+        self.lexer.match(Operator("="))
+        b=self.parse_expr()
+        self.lexer.match(Keyword("in"))
+        a=self.parse_expr()
+        return LetConst(c,b,a)
+    
+    def parse_while(self):
+        self.lexer.match(Keyword("while"))
+        c = self.parse_expr()
+        self.lexer.match(Keyword("do"))
+        t = self.parse_expr()
+        # self.lexer.match(Keyword("done"))
+        return Whilethen(c, t)
+    
     def parse_print(self):
         self.lexer.match(Keyword('print'))
         args=[]
@@ -467,8 +484,10 @@ class Parser:
                 return self.parse_list()
             case Keyword("for"):
                 return self.parse_for()
-                
-                 
+            case Keyword("letconst"):
+                return self.parse_let_const()
+            case Keyword("while"):
+                return self.parse_while()
             case Keyword("String"):
                 return self.parse_string()
             case Method('length',Identifier(name)):
