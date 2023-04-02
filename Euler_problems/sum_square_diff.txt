@@ -1,0 +1,14 @@
+let sum=0 in
+let sq=0 in
+let a=1 in 
+seq
+for a<10 up a+=1 do
+    seq
+    sum=sum+a*a;
+    sq=sq+a;
+    endseq
+    end;
+print sum;
+print sq*sq-sum;
+endseq
+end
