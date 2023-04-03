@@ -1,0 +1,41 @@
+1) Sum of multiples of 3 or 5 from 0 to 100
+let a=0 in
+let sum=0 in
+seq
+for a<100 up a+=1 do
+    seq
+    if a%3 == 0 | a%5==0 then
+    seq
+    sum=sum+a;
+    endseq
+    endseq
+    end;
+print sum;
+endseq
+end
+
+2) Divisors of a given number
+let a=2520 in
+let b=0 in
+seq
+for b<=20 up b+=1 do
+    seq
+    if b%2==0 then
+    print b;
+    endseq
+    end;
+endseq 
+end
+
+3) Factorial
+let a=5 in
+let b=1 in
+let fact=1 in
+seq
+for b<=a up b+=1 do
+    seq
+    fact=fact*b;
+    endseq
+    end;
+print fact;
+endseq
