@@ -1,12 +1,12 @@
 
-### Installation Guide
+# Installation Guide
 
 
 Thorium language is written in the Python. 
 To run this code you need following dependencies 
 Python 3.11 onwards
 
-# File structure and description 
+## File structure and description 
 
 The current version of the compiler consist of following files and folder
 start.py : contains evaluater and definations of the language
@@ -17,7 +17,7 @@ Readme.md
 documentation : contains variours guides to get started with the language
 Euler_problems : contains solution to Euler's problems in thorium language
 
-# To start writing code in Thorium :
+## To start writing code in Thorium :
 
 Clone repository using this link with git (HTTPS link )
 https://github.com/compilerdesign2023/Compiler.git
