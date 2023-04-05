@@ -72,8 +72,8 @@ Token = Num | Bool | Keyword | Identifier | Operator | BitwiseOperator | List| S
 class EndOfTokens(Exception):
     pass
 
-keywords = "if then elif else end letend letconst  endfor while done let in list String len length do  for up print seq endseq".split()
-symbolic_operators = "+ - * / < > <= >= = ≠ ++ ==".split()
+keywords = "if then elif else end letend endfor while done let in list String len length do  for up print seq endseq".split()
+symbolic_operators = "+ - * / < > <= >= = != ++ ==".split()
 unary_operators="++ -- +=".split()
 double_operators='>= <= << >>'.split()
 word_operators = "and or not quot rem".split()
@@ -306,18 +306,22 @@ class Parser:
     
     def parse_print(self):
         self.lexer.match(Keyword('print'))
-        args=[]
-        arg=self.parse_expr()
-        args.append(arg)
-        while True:
-            match self.lexer.peek_token():
-                case Operator(op) if op in comma: 
-                    self.lexer.advance()
-                    arg=self.parse_expr()
-                    args.append(arg)
-                case _:
-                    break
-        return PrintOp(args)
+        p=self.parse_expr()
+        self.lexer.advance()
+        return PrintOp(p)
+        # args=[]
+        # arg=self.parse_expr()
+        # args.append(arg)
+        # while True:
+        #     match self.lexer.peek_token():
+        #         case Operator(op) if op in comma: 
+        #             self.lexer.advance()
+        #             arg=self.parse_expr()
+        #             args.append(arg)
+        #         case _:
+        #             break
+        # return PrintOp(args)
+
     
         def parse_seq(self):
         self.lexer.match(Keyword('seq'))
@@ -356,11 +360,8 @@ class Parser:
                             
                 case _:
                     list.append(self.parse_expr())  
-                    continue               
+                    continue             
                   
-            
-        
-
     def parse_list(self):
         self.lexer.match(Keyword('list'))
         match self.lexer.peek_token():
@@ -459,34 +460,54 @@ class Parser:
         self.lexer.match(Method('length',Identifier(m.identifier.word)))
         return ListOp('length',Variable(m.identifier.word))
 
-    def parse_cmp(self):
+    def parse_shift(self):
         left = self.parse_add()
         match self.lexer.peek_token():
-            case Operator(op) if op in "<>" or op in "<= >= << >>".split():
+            case Operator(op) if op in "<>" or op in "<< >>".split():
                 self.lexer.advance()
                 right = self.parse_add()
                 return BinOp(op, left, right)
         return left
 
     def parse_bitwise(self):
-        left = self.parse_cmp()
+        left = self.parse_shift()
         while True:
             match self.lexer.peek_token():
                 case BitwiseOperator(op) if op in "& | ^":
                     self.lexer.advance()
-                    right = self.parse_cmp()
+                    right = self.parse_shift()
                     left = BinOp(op, left, right) 
+                case _:
+                    break
+        return left
+    
+    def parse_cmp(self):
+        left = self.parse_bitwise()
+        match self.lexer.peek_token():
+            case Operator(op) if op in "<= >= == != < >".split():
+                self.lexer.advance()
+                right = self.parse_bitwise()
+                return BinOp(op, left, right)
+        return left
+    
+    def parse_log(self):
+        left = self.parse_shift()
+        while True:
+            match self.lexer.peek_token():
+                case Operator(op) if op in "and or":
+                    self.lexer.advance()
+                    right = self.parse_cmp()
+                    left = LogOp(op, left, right) 
+                case Operator(op) if op in "not":
+                    self.lexer.advance()
+                    left= LogOp(op, left) 
                 case _:
                     break
         return left
 
     def parse_simple(self):
-        return self.parse_bitwise()
+        return self.parse_log()
     
-    
-
-        
-
     def parse_expr(self):
         
         match self.lexer.peek_token():

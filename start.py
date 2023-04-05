@@ -78,6 +78,13 @@ class BinOp:
     right: 'AST'
     type: Optional[SimType] = None
 
+@dataclass
+class LogOp:
+    operator: str
+    left: 'AST'
+    right: Optional['AST']= None
+    type: Optional[SimType] = None
+
 @dataclass(frozen=True)
 class Variable:
     name: str
@@ -235,7 +242,7 @@ class Environment:
                 return env[name]
         return None
 
-AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|IntLiteral|FracLiteral|ListOp| Get | Put |Let | LetConst |Seq | Whilethen |For | Variable|LetFun | FunCall | PrintOp| If
+AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|IntLiteral|FracLiteral|ListOp| Get | Put |Let | LetConst |Seq | Whilethen |For | Variable|LetFun | FunCall | LogOp| PrintOp| If
 
 
 @dataclass
@@ -251,6 +258,7 @@ class TypeError(Exception):
     pass
 Binary_operators  = "+ - * / % ** // ".split()
 Binary_operators_comparision = "== != < > <= >=".split()
+Logical_operators = "and or not".split()
 # Since we don't have variables, environment is not needed.
 def typecheck(program: AST, env = None) -> TypedAST:
     match program:
@@ -541,18 +549,28 @@ def eval(program: AST, environment: Environment = None) -> Value:
             new_val=val+(eval2(right))
             eval2(Put(left,NumLiteral(new_val)))
             return eval2(NumLiteral(new_val))
+        
+        case LogOp("and",left,right):
+            return eval2(left ) and eval2(right)
+        case LogOp("or",left,right):
+            return eval2(left ) or eval2(right)
+        case LogOp("not",right):
+            return not eval2(right)
+
 
         case PrintOp(inp):
-            if isinstance(inp[0], str):
-                print(inp[0])
-            else:
-                for item in inp:
-                    item_type=typecheck(item).type
-                    if item_type== VarType or BoolType or NumType or IntType or StringType:
-                        item=eval2(item)
-                        print(item,end=" ")
-                    print()
-            return 
+            # if isinstance(inp[0], str):
+            #     print(inp[0])
+            # else:
+            #     for item in inp:
+            #         item_type=typecheck(item).type
+            #         if item_type== VarType or BoolType or NumType or IntType or StringType:
+            #             item=eval2(item)
+            #             print(item,end=" ")
+            #         print()
+            # return 
+            print(eval2(inp))
+            return
   
         # String Operations
         # implement string typecheck for this
@@ -703,3 +721,4 @@ def eval(program: AST, environment: Environment = None) -> Value:
         
         
     raise InvalidProgram()
+
