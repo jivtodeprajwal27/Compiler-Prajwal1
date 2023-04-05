@@ -323,7 +323,7 @@ class Parser:
         # return PrintOp(args)
 
     
-        def parse_seq(self):
+    def parse_seq(self):
         self.lexer.match(Keyword('seq'))
         list=[]
         while True:
