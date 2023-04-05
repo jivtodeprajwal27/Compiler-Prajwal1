@@ -1,11 +1,11 @@
-let a=5 in
-let b=1 in
-let fact=1 in
+let r=0 in
+let sum=0 in
+let a=123 in
+while a>0 do
 seq
-for b<=a up b+=1 do
-    seq
-    fact=fact*b;
-    endseq
-    end;
-print fact;
+r=a%10;
+sum=sum+r*10;
+a=a//10;
+print sum;
 endseq
+end
