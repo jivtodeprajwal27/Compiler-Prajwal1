@@ -195,6 +195,11 @@ class LetFun:
 class FunCall:
     fn: 'AST'
     args: List['AST']
+        
+@dataclass
+class FnObject:
+    params: List['AST']
+    body: 'AST'
 
 
 @dataclass
@@ -238,10 +243,7 @@ class Environment:
 AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|IntLiteral|FracLiteral|ListOp| Get | Put |Let | LetConst |Seq | Whilethen |For | Variable|LetFun | FunCall | PrintOp| If
 
 
-@dataclass
-class FnObject:
-    params: List['AST']
-    body: 'AST'
+
 
 Value = Fraction|FnObject
 
@@ -399,8 +401,8 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return value
         case FracLiteral(value):
             return value
-        case Variable(name):
-            return environment.get(name)
+        case Variable(_) as v:
+            return environment.get(v)
         case ListLiteral(value):
             # print(f'values: {value}')
             return value
@@ -445,23 +447,24 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case BinOp("/", left, right):
             if(right==0):
                 raise InvalidProgram()
-            left_type=typecheck(left).type
-            right_type=typecheck(right).type
+            return  eval2(left ) /  eval2(right )
+#             left_type=typecheck(left).type
+#             right_type=typecheck(right).type
             
-            print(eval2(left))
+#             print(eval2(left))
 
-            if (left_type==NumType and right_type== NumType):
-                return  eval2(left ) /  eval2(right )
-            elif(left_type==VarType and right_type== VarType):
-                return float(float(eval2(left )) /  float(eval2(right )))
-            elif(left_type==IntType and right_type== IntType):
-                return int(int(eval2(left )) /  int(eval2(right )))
-            elif(left_type==FracType and right_type== FracType):
-                return  Fraction(Fraction(eval2(left )) /  Fraction(eval2(right )))
-            else:
-                # print(left_type)
-                # print(right_type)
-                raise TypeError()
+#             if (left_type==NumType and right_type== NumType):
+#                 return  eval2(left ) /  eval2(right )
+#             elif(left_type==VarType and right_type== VarType):
+#                 return float(float(eval2(left )) /  float(eval2(right )))
+#             elif(left_type==IntType and right_type== IntType):
+#                 return int(int(eval2(left )) /  int(eval2(right )))
+#             elif(left_type==FracType and right_type== FracType):
+#                 return  Fraction(Fraction(eval2(left )) /  Fraction(eval2(right )))
+#             else:
+#                 # print(left_type)
+#                 # print(right_type)
+#                 raise TypeError()
         case BinOp("//", left, right):
             if(right==0):
                 raise InvalidProgram()
@@ -700,6 +703,25 @@ def eval(program: AST, environment: Environment = None) -> Value:
                     break
             environment.exit_scope()
             return
+        
+        case LetFun(Variable(_) as v, params, body, expr):
+            environment.enter_scope()
+            environment.add(v, FnObject(params, body))
+            v = eval2(expr)
+            environment.exit_scope()
+            return v
+        
+        case FunCall(Variable(_) as v, args):
+            fn = environment.get(v)
+            argv = []
+            for arg in args:
+                argv.append(eval2(arg))
+            environment.enter_scope()
+            for param, arg in zip(fn.params, argv):
+                environment.add(param, arg)
+            v = eval2(fn.body)
+            environment.exit_scope()
+            return v
         
         
     raise InvalidProgram()
