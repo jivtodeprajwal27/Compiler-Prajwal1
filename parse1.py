@@ -320,6 +320,19 @@ class Parser:
         p=self.parse_expr()
         self.lexer.advance()
         return PrintOp(p)
+        # args=[]
+        # arg=self.parse_expr()
+        # args.append(arg)
+        # while True:
+        #     match self.lexer.peek_token():
+        #         case Operator(op) if op in comma: 
+        #             self.lexer.advance()
+        #             arg=self.parse_expr()
+        #             args.append(arg)
+        #         case _:
+        #             break
+        # return PrintOp(args)
+
     
     def parse_seq(self):
         self.lexer.match(Markers('{'))
@@ -357,7 +370,7 @@ class Parser:
                             
                 case _:
                     list.append(self.parse_expr())  
-                    continue               
+                    continue             
                   
             
     def parse_func(self):
@@ -524,34 +537,54 @@ class Parser:
         self.lexer.match(Method('length',Identifier(m.identifier.word)))
         return ListOp('length',Variable(m.identifier.word))
 
-    def parse_cmp(self):
+    def parse_shift(self):
         left = self.parse_add()
         match self.lexer.peek_token():
-            case Operator(op) if op in "<>" or op in "<= >= << >>".split():
+            case Operator(op) if op in "<>" or op in "<< >>".split():
                 self.lexer.advance()
                 right = self.parse_add()
                 return BinOp(op, left, right)
         return left
 
     def parse_bitwise(self):
-        left = self.parse_cmp()
+        left = self.parse_shift()
         while True:
             match self.lexer.peek_token():
                 case BitwiseOperator(op) if op in "& | ^":
                     self.lexer.advance()
-                    right = self.parse_cmp()
+                    right = self.parse_shift()
                     left = BinOp(op, left, right) 
+                case _:
+                    break
+        return left
+    
+    def parse_cmp(self):
+        left = self.parse_bitwise()
+        match self.lexer.peek_token():
+            case Operator(op) if op in "<= >= == != < >".split():
+                self.lexer.advance()
+                right = self.parse_bitwise()
+                return BinOp(op, left, right)
+        return left
+    
+    def parse_log(self):
+        left = self.parse_shift()
+        while True:
+            match self.lexer.peek_token():
+                case Operator(op) if op in "and or":
+                    self.lexer.advance()
+                    right = self.parse_cmp()
+                    left = LogOp(op, left, right) 
+                case Operator(op) if op in "not":
+                    self.lexer.advance()
+                    left= LogOp(op, left) 
                 case _:
                     break
         return left
 
     def parse_simple(self):
-        return self.parse_bitwise()
+        return self.parse_log()
     
-    
-
-        
-
     def parse_expr(self):
         
         match self.lexer.peek_token():
