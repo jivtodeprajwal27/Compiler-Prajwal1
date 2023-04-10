@@ -728,7 +728,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
             v = eval2(expr)
             environment.exit_scope()
             return v
-        
+
         case FunCall(Variable(_) as v, args):
             fn = environment.get(v)
             argv = []
