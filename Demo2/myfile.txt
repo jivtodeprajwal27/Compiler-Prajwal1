@@ -1,0 +1,42 @@
+let l=1 in
+let n= 1000 in
+{
+    while n>1 do
+        let f = if n%2 == 0 then n//2 else 3*n +1 end in
+        {
+            n=f;
+            l=l+1;
+        };
+    print l;
+}
+
+
+let ans=0 in
+let num = 100 in
+{
+    while num<=1000000 do
+    {
+            let l=1 in
+            let n= num in
+            {
+                while n>1 do
+                    let f = if n%2 == 0 then n//2 else 3*n +1 end in
+                    {
+                        n=f;
+                        l=l+1;
+                    };
+                print l;
+            };
+            {
+                num=num*10;
+            };
+    };
+            
+}
+end
+
+
+
+
+
+
