@@ -1,144 +1,145 @@
 ﻿# **Thorium Documentation**
 
-**Language Description** : Thorium is under development, a high-level, general-purpose
 
-programming language created as part of the CS 327 course at IITGN. Thorium is statically type-checked with an emphasis on expressiveness.
+```
+Language Description :Thorium is under development,a high-level, general-purpose
+programming language created as part of the CS 327 course at IITGN.Thorium emphasis on expressiveness.
+```
+## DataTypes
+```
+**1. Numeric**
+    NumType->Integer|Fraction
+    IntType->Integer
+    Fractype->Fraction
+**2. String**
+    StringType->str
+**3. List**
+    ListType->list
+**4. Boolean**
+    BoolType->bool
+**5. Variable**
+    VarType->var
+```
+
+## Operators:
+
+**1. BinaryOperators:**
+    **Input** - BinOp(“Operator”,left,right)
+    **Operators-** + - * /// ** %
+    **Operand(left,right)-** NumType|IntType|FracType|Vartype
 
 
-**Data Types**
-
-1. **Numeric**
-
-NumType ->Integer | Fraction IntType ->Integer
-
-Fractype ->Fraction
-
-2. **String** StringType ->str
-2. **List**
-
-ListType ->list
-
-4. **Boolean** BoolType ->bool
-4. **Variable** VarType ->var
-
-**Operators:**
-
-1. **Binary Operators:**
-
-**Input**- BinOp(“Operator”, left,right)
-
-**Operators-** + - \* / // \*\* %
-
-**Operand (left,right)-** NumType | IntType | FracType | Vartype
-
-(+): sums up left and right
-
-return eval(left)+ eval(right) (- ): difference ofleft and right
-
-return eval(left)- eval(right) (\*): product ofleft and right
-
-return eval(left)\* eval(right) (/ ): divides ofleft with right
-
+```
+(+):sumsupleftandright
+return eval(left)+ eval(right)
+(-): differenceofleftandright
+return eval(left)- eval(right)
+(*):productofleftandright
+return eval(left)* eval(right)
+(/):dividesofleftwithright
 return eval(left)/ eval(right)
-
-(// ): floor division
-
+(//):floordivision
 return eval(left)// eval(right)
+(%):modulooperator
+return eval(left)+ eval(right)
+(**):poweroperator,lefttothepowerright
+return eval(left)** eval(right)
+```
+( **Note:** The return type of the result is the same as types of left and right both, it is int if the      resultant value is integer and float if result contains decimal. 
+IntType operand only allows operations to be executed with IntType operand for division, same goes for FracType
+)
 
-(%): modulo operator
+**2. ComparisonOperators:**
+    **Input** - BinOp(“Operator”,left,right)
+    **Operators-** == != < > >= <=
+    **Operand(left,right)-** NumType|Vartype
+    **ReturnType-** BoolType
 
-return eval(left)+ eval(right) (\*\*): power operator, left to the power right
+```
+(==): Checks if two values are equal
+(!=): Checks if two values are not equal
+(<): Checks if the value on the left is less than right
+(>): Checks if the value on the left is greater than right
+(<=) : Checks if the value on the left is less than or equal to the right
+(>=): Checks if the value on the left is greater than or equal to the rig
 
-return eval(left)\*\* eval(right)
+```
 
-(**Note:**The   ofthe result is the same as types ofleft and right both, it is int ifthe ![](Aspose.Words.d7d7eda5-8a91-4c16-a81b-7f7970189c36.001.png)resultant value is integer and float ifresult contains decimal.
+**3. BitwiseOperators** :& |^ >> <<
+    **Input** - BinOp(“Operator”,left,right)
+    **Operators-** & |^ >> <<
+    **Operand(left,right)-** NumType|Vartype
 
-IntType operand only allows operations to be executed with IntType operand for division, same goes for FracType)
 
-2. **Comparison Operators:**
+**4. UnaryOperators**
 
-**Input**- BinOp(“Operator”, left,right)
+Input - UnOp(“Operator”,“Operand”)
+Operators- “-”,”++”,“--”
+Operand- NumType
 
-**Operators-** == != < > >= <=
-
-**Operand (left,right)-** NumType | Vartype **ReturnType-**BoolType
-
-(==): Checks iftwo values are equal
-
-(!=): Checks iftwo values are not equal
-
-(<): Checks ifthe value on the left is less than right
-
-(>): Checks ifthe value on the left is greater than right
-
-(<=): Checks ifthe value on the left is less than or equalto the right (>=): Checks ifthe value on the left is greater than or equalto the right
-
-3. **Bitwise Operators** : & | ^ >> <<
-
-**Input**- BinOp(“Operator”, left,right) **Operators-** & | ^ >> <<
-
-**Operand (left,right)-** NumType | Vartype
-
-4. **Unary Operators**
-
-**Input**- UnOp(“Operator”, “Operand”) **Operators-** “-”,”++”, “--”
-
-**Operand-** NumType
-
-(- ): Unary negation, negates value
-
-return “-Operand” (++): Increments the value by one
-
-return “Operand+1” (-- ): Decrements the value by one
-
+```
+(-):Unarynegation,negatesvalue
+return “-Operand”
+(++):Incrementsthevaluebyone
+return “Operand+1”
+(--):Decrementsthevaluebyone
 return “Operand-1”
+```
+**5. PrintOperation**
+    **Input-** PrintOp(‘AST’)
+    return print(eval(‘AST’))
 
-5. **Print Operation**
+```
+(Note:fornowPrintOPonlytakeoneASTasinput)
+```
+**6. AssignmentOperators** :+=
+    **Input** - BinOp(“+=”,left,right)
+    **Operandtype:** left-VarType
+       right-NumType|VarType
 
-**Input-** PrintOp(‘AST’)
+## Variables:
 
-return print(eval(‘AST’))       (Note:for now PrintOP only take one AST as input)
-
-6. **Assignment Operators**: += **Input**- BinOp(“+=”,left,right) **Operand type:**left- VarType
-
-right- NumType | VarType
-
-**Variables:**
-
-1. **Mutable :** are defined with let
-1. **Immutable:**are defined with letconst.
+1. **Mutable:** aredefinedwithlet
+2. **Immutable:** aredefinedwithletconst.
 
 **List Methods:**
 
 1. **Append**
 
 Append elements into the list.
-
-**Example-** i)ListOp(“append”,ListLiteral([1,2,3,4,5]),NumLiteral(10))
-
+```
+i)
+**Example-** i)ListOp(“append”,ListLiteral([1,2,3,4,5]),NumLiteral(10)
 ii)
-
 ListOp(“append”,ListLiteral([1,2,3,4,5]),ListLiteral([5,6,7,7]))
-
+```
 2. **Length**
 
-Returns the length ofthe list. **Example-**ListOp(“length”,ListLiteral([1,2,3]))
-
+Returns the length ofthe list. 
+**Example-**
+```
+ListOp(“length”,ListLiteral([1,2,3]))
+```
 3. **Remove**
 
-Removes the last element ofthe list. **Example-**ListOp(“remove”,my\_list)
+Removes the last element ofthe list. 
+**Example-** 
+```ListOp(“remove”,my\_list)```
 
 4. **Assign**
 
 Assign elements to the index ofthe array.
-
+```
 **Structure:**ListOp(“assign”,array,index,assign\_value)
 
 **Example-** ListOp(“assign”,ListLiteral([1,2,3,4]),NumLiteral(1),NumLiteral (10))
-
+```
 5. **Get**
 
-Returns element ofa particular index. **Structure:**ListOp(“get”,array,index) **Example**-ListOp(“get”,ListLiteral([1,2,3]),NumLiteral(1))
+Returns element ofa particular index.
+```
+**Structure:**ListOp(“get”,array,index) **Example**-ListOp(“get”,ListLiteral([1,2,3]),NumLiteral(1))
+```
 
 **String Methods:**
 
@@ -146,13 +147,18 @@ Returns element ofa particular index. **Structure:**ListOp(“get”,array,index
 
 Returns String Length.
 
-Example-StringOp(‘length’,StringLiteral(“Hello World”))
+Example-
+```
+StringOp(‘length’,StringLiteral(“Hello World”))
+```
 
 2. **Add**
 
 Concatenates two strings.
 
-Example- StringOp(“add”,StringLiteral(“Hello”),StringLiteral(“World”))
+Example- 
+```StringOp(“add”,StringLiteral(“Hello”),StringLiteral(“World”))```
+
 
 3. **Compare**
 
