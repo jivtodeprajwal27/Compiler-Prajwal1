@@ -1,9 +1,12 @@
 from fractions import Fraction
 from dataclasses import dataclass,field
-from typing import Optional, NewType, Mapping, List,Dict,Union,Any
+from typing import Optional, NewType, Mapping, List
 
 currentID = 0
 
+"""
+    Creating data types for the language
+"""
 def fresh():
     global currentID
     currentID = currentID + 1
@@ -39,12 +42,17 @@ class FracType:
 
 SimType = NumType | BoolType | StringType | ListType | IntType | FracType | VarType
 
+"""
+    Defining the structure of data types, conditionals, unary and 
+    binary operators and loops.
+"""
+
 @dataclass
 class NumLiteral:
     value: Fraction
     type: SimType = NumType
-    def __init__(self, *args):
-        self.value = Fraction(*args)
+    # def __init__(self, *args):
+    #     self.value = Fraction(*args)
 
 @dataclass 
 class IntLiteral:
@@ -78,22 +86,17 @@ class BinOp:
     right: 'AST'
     type: Optional[SimType] = None
 
-@dataclass
-class LogOp:
-    operator: str
-    left: 'AST'
-    right: Optional['AST']= None
-    type: Optional[SimType] = None
-
 @dataclass(frozen=True)
 class Variable:
     name: str
-    type : SimType = VarType
-    # id:int
+    # id: int
+    # localID:int
+    type: SimType = VarType
+
 
     # def make(name):
-    #     print(fresh())
-    #     return Variable(name,VarType, fresh())
+    #     return Variable(name, fresh(), VarType)
+
     
 
 @dataclass
@@ -102,8 +105,15 @@ class UnOp:
     vari : int
 
 @dataclass
+class LogOp:
+    operator: str
+    left: 'AST'
+    right: Optional['AST']= None
+    type: Optional[SimType] = None 
+
+@dataclass
 class PrintOp:
-    inp: list['AST'] 
+    inp: 'AST'
 
 
 @dataclass
@@ -129,13 +139,6 @@ class LetGlobal:
     var:'AST'
     e1:'AST'
     e2:Optional['AST']
-
-@dataclass
-class If:
-    cond: 'AST'
-    body: 'AST'
-    type: Optional[SimType] = None
-
 @dataclass
 class IfElse:
     condition: 'AST'
@@ -191,6 +194,7 @@ class For:
     condition:'AST'
     update:'AST'
     body:'AST'
+
 @dataclass
 class LetFun:
     name: 'AST'
@@ -202,20 +206,25 @@ class LetFun:
 class FunCall:
     fn: 'AST'
     args: List['AST']
-        
+
 @dataclass
 class FnObject:
     params: List['AST']
     body: 'AST'
-
-
 @dataclass
+class If:
+    cond: 'AST'
+    body: 'AST'
+    type: Optional[SimType] = None
 
+"""
+    Creating environment as a list of dictionaries which ensures
+    scoping is done correctly.
+"""
 class Environment:
-    envs: List[Dict[str, Any]] = field(default_factory=list)
+    envs: List
 
-    def __init__(self, variables: Dict[str, Any] = None):
-        self.variables = variables or {}
+    def __init__(self):
         self.envs = [{}]
 
     def enter_scope(self):
@@ -241,27 +250,32 @@ class Environment:
                 env[name] = value
                 return
         raise KeyError()
-    def check(self, name):
-        for env in reversed(self.envs):
-            if name in env:
-                return env[name]
-        return None
+    
+"""
+    AST here has the different types of node
+    value it can have.
 
-AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|ListLiteral|IntLiteral|FracLiteral|ListOp| Get | Put |Let | LetConst |Seq | Whilethen |For | Variable|LetFun | FunCall | LogOp| PrintOp| If
+    Value defined here is return value from
+    the eval function below.
+"""
 
-
-
-
+AST = NumLiteral | BoolLiteral | BinOp | IfElse | StringLiteral | StringOp|LogOp|ListLiteral|IntLiteral|FracLiteral|ListOp| Get | Put |Let | LetConst |Seq | Whilethen |For | Variable|LetFun | FunCall
 Value = Fraction|FnObject
-
 TypedAST = NewType('TypedAST', AST)
 
 class TypeError(Exception):
     pass
 Binary_operators  = "+ - * / % ** // ".split()
 Binary_operators_comparision = "== != < > <= >=".split()
-Logical_operators = "and or not".split()
 # Since we don't have variables, environment is not needed.
+
+
+"""
+    Typechecking the data types, binary operations, unary operations,
+    let, conditionals and loops for ensuring operations are 
+    performed between correct data types.
+
+"""
 def typecheck(program: AST, env = None) -> TypedAST:
     match program:
         case NumLiteral() as t: # already typed.
@@ -331,16 +345,6 @@ def typecheck(program: AST, env = None) -> TypedAST:
         case PrintOp(inp):
             if inp==None:
                 raise TypeError()
-            
-        case If(c,b):
-            tc=typecheck(c)
-            if tc.type != BoolType:
-                raise TypeError()
-            tb = typecheck(b)
-            if tb.type != SimType:
-                raise TypeError
-            return If(tc,tb,tb.type)
-
         case IfElse(c, t, f): # We have to typecheck both branches.
             tc = typecheck(c)
             if tc.type != BoolType:
@@ -386,8 +390,18 @@ def typecheck(program: AST, env = None) -> TypedAST:
         
     raise TypeError()
 
+
+
+"""
+    Defining an exception to raise in case of Invalid Program.
+"""
+
 class InvalidProgram(Exception):
     pass
+
+"""
+    Eval Function evaluates the AST and returns Value. 
+"""
 
 
 def eval(program: AST, environment: Environment = None) -> Value:
@@ -401,6 +415,10 @@ def eval(program: AST, environment: Environment = None) -> Value:
     
     # always call eval2 for enviornment passing instead of eval(program, envi)
     match program:
+
+        # Here the value of data types
+        # are simply returned if they are encountered.
+
         case NumLiteral(value):
             return value
         case StringLiteral(value):
@@ -416,11 +434,20 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return value
         case BoolLiteral(value):
             return value
-        case Let(Variable(name), e1, e2):
+        
+
+        
+        # Let is used to create new bindings
+        # after evaluating the first expression
+        # it creates a new scope where second
+        # expression is evaluated. Same is the
+        # case with LetConst with exception that
+        # it cannot be redefined.
+
+        case Let(Variable(_) as v, e1, e2):
             v1 = eval2(e1)
             environment.enter_scope()
-            environment.add(name,v1)
-           
+            environment.add(v, v1)
             v2 = eval2(e2)
             environment.exit_scope()
             return v2
@@ -435,17 +462,22 @@ def eval(program: AST, environment: Environment = None) -> Value:
             v2 = eval2(e2)
             environment.exit_scope()
             return v2
-        case Put(Variable(name),e):
-            environment.update(name,eval2(e))
-            return environment.get(name)
-        case Get(Variable(name)):
-            return environment.get(name)
+        
+        # Put is used to update value of the variable
+        case Put(Variable(_) as v, e):
+            environment.update(v, eval2(e))
+            return environment.get(v)
+        
+        # Get is used to retreive the value of the variable
+        case Get(Variable(_) as v):
+            return environment.get(v)
         case Seq(things):
             v = None
             for thing in things:
                 v = eval2(thing)
             return v
-            
+        
+        # Binary Operators
         case BinOp("+", left, right):
             return eval2(left) + eval2(right)
         case BinOp("-", left, right):
@@ -456,23 +488,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
             if(right==0):
                 raise InvalidProgram()
             return  eval2(left ) /  eval2(right )
-#             left_type=typecheck(left).type
-#             right_type=typecheck(right).type
             
-#             print(eval2(left))
-
-#             if (left_type==NumType and right_type== NumType):
-#                 return  eval2(left ) /  eval2(right )
-#             elif(left_type==VarType and right_type== VarType):
-#                 return float(float(eval2(left )) /  float(eval2(right )))
-#             elif(left_type==IntType and right_type== IntType):
-#                 return int(int(eval2(left )) /  int(eval2(right )))
-#             elif(left_type==FracType and right_type== FracType):
-#                 return  Fraction(Fraction(eval2(left )) /  Fraction(eval2(right )))
-#             else:
-#                 # print(left_type)
-#                 # print(right_type)
-#                 raise TypeError()
         case BinOp("//", left, right):
             if(right==0):
                 raise InvalidProgram()
@@ -502,8 +518,6 @@ def eval(program: AST, environment: Environment = None) -> Value:
             right_type=typecheck(right).type
             
             if(left_type!=NumType or right_type!=NumType):
-                # print(left_type)
-                # print(right_type)
                 raise InvalidProgram()
             return int( eval2(left )) & int( eval2(right ))
         case BinOp("|",left,right):
@@ -542,6 +556,8 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 print(right_type)
                 raise InvalidProgram()
             return int( eval2(left )) << int( eval2(right ))
+        
+        # Addition Assignment Operator
         case BinOp("+=",left,right):
             left_type=typecheck(left).type
             right_type=typecheck(right).type
@@ -552,37 +568,21 @@ def eval(program: AST, environment: Environment = None) -> Value:
             new_val=val+(eval2(right))
             eval2(Put(left,NumLiteral(new_val)))
             return eval2(NumLiteral(new_val))
-        
-        case LogOp("and",left,right):
-            return eval2(left ) and eval2(right)
-        case LogOp("or",left,right):
-            return eval2(left ) or eval2(right)
-        case LogOp("not",right):
-            return not eval2(right)
-
 
         case PrintOp(inp):
-            # if isinstance(inp[0], str):
-            #     print(inp[0])
-            # else:
-            #     for item in inp:
-            #         item_type=typecheck(item).type
-            #         if item_type== VarType or BoolType or NumType or IntType or StringType:
-            #             item=eval2(item)
-            #             print(item,end=" ")
-            #         print()
-            # return 
             print(eval2(inp))
-            return
+            return 
   
         # String Operations
-        # implement string typecheck for this
+        # with string typecheck 
+
         case StringOp('add',left,right):
             left_type=typecheck(left).type
             right_type=typecheck(right).type
-            if(left_type!=StringType or right_type!=StringType):
+            types=[VarType,StringType]
+            if(left_type not in types or right_type not in types):
                 raise InvalidProgram()
-            return  eval2(left )+ eval2(right )
+            return  f"{eval2(left )}{eval2(right )}"
         
         case StringOp('compare',left,right):
             left_type=typecheck(left).type
@@ -597,15 +597,12 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 raise InvalidProgram()
             return len(eval2(left))        
 
-        
-
-
         case StringSlice("slice", left,start, stop,step):
             left_value =  eval2(left )
-            return left_value[start:stop:step]
+            return left_value[eval2(start):eval2(stop):eval2(step)]
         
 
-        #unary Operations
+        #unary Operations including unary negation, addition, subtraction
         case UnOp('-',vari):
             un= eval2(vari )
             un=-un
@@ -622,7 +619,16 @@ def eval(program: AST, environment: Environment = None) -> Value:
             eval2(Put(vari,NumLiteral(un)))
             return  eval2(NumLiteral(un) )
         
-        #If
+        case LogOp("and",left,right):
+            return eval2(left ) and eval2(right)
+        case LogOp("or",left,right):
+            return eval2(left ) or eval2(right)
+        case LogOp("not",right):
+            return not eval2(right)
+        
+
+    
+        #Only If
         case If(c,b):
             condition_eval= eval2(c)
             if(condition_eval==True):
@@ -632,22 +638,19 @@ def eval(program: AST, environment: Environment = None) -> Value:
 
         # IfElse
         case IfElse(c,l,r):
-            # if(typecheck(l)!=typecheck(r)):
-            #     return InvalidProgram()
+        
             condition_eval= eval2(c)
-            # print(typech(c))
 
             if(condition_eval==True):
                 return  eval2(l)
-                
             else:
                 return  eval2(r)
         
-        # List Operations
+        # List Operations 
+
         case ListOp("append",left,right):
             
-            # if(right.type!=left.type):
-            #     raise InvalidProgram
+            
             l= eval2(left)
             r= eval2(right)
             if(type(r)==Fraction):
@@ -661,8 +664,8 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return len( eval2(left))
 
         case ListOp('assign',array,index,assign):
-            if(typecheck(assign).type!=array.type or typecheck(index).type!=NumType):
-                raise InvalidProgram
+            # if(typecheck(assign).type!=array.type or typecheck(index).type!=NumType):
+            #     raise InvalidProgram
             arr= eval2(array)
             
             arr[int( eval2(index))]=int( eval2(assign))
@@ -686,13 +689,12 @@ def eval(program: AST, environment: Environment = None) -> Value:
             arr.remove(index)
             return arr
         case ListOp('get',array,index):
-            # i_type=typecheck(index)
-
-            # if(i_type.type!=NumType):raise InvalidProgram()
 
             if(int(eval2(index))>=len(eval2(array))): raise InvalidProgram()
 
             return eval2(array)[int(eval2(index))]
+        
+
         case Un_boolify(left):
             left_var=eval(left,environment)
             if left_var==0:
@@ -702,6 +704,8 @@ def eval(program: AST, environment: Environment = None) -> Value:
             elif len(left_var)==0:
                 return bool(left_var)
             return bool(left_var)
+        
+        # For Loop and While Loop 
         
         case For(condition, update, body):
             while eval2(condition):
@@ -722,13 +726,17 @@ def eval(program: AST, environment: Environment = None) -> Value:
             environment.exit_scope()
             return
         
+        # Functions are defined such that there are two 
+        # Classes one for defining(LetFun) the functions with all its
+        # parameters and body while other(FunCall) is used for calling it.
+
         case LetFun(Variable(_) as v, params, body, expr):
             environment.enter_scope()
             environment.add(v, FnObject(params, body))
             v = eval2(expr)
             environment.exit_scope()
             return v
-
+        
         case FunCall(Variable(_) as v, args):
             fn = environment.get(v)
             argv = []
@@ -740,7 +748,11 @@ def eval(program: AST, environment: Environment = None) -> Value:
             v = eval2(fn.body)
             environment.exit_scope()
             return v
+           
         
         
     raise InvalidProgram()
+
+
+
 
