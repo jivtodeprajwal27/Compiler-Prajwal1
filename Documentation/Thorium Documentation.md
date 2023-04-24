@@ -4,11 +4,6 @@
 
 programming language created as part of the CS 327 course at IITGN. Thorium is statically type-checked with an emphasis on expressiveness.
 
-**Readme**
-
-**Language Description** : Thorium is under development, a high-level, general-purpose
-
-programming language created as part of the CS 327 course at IITGN. Thorium is statically type-checked with emphasis on expressiveness.
 
 **Data Types**
 
